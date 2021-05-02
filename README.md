@@ -1,5 +1,5 @@
 # stroll
-Automatically join zoom links. Without the browser.
+Automatically join zoom links. Without a browser.
 
 
 ## About
