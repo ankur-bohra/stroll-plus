@@ -40,7 +40,7 @@ class Scheduler:
                     break
                 node = node.next
         
-        if head != self.head:
+        if task == self.head:
             # Timer needs to be changed
             if self.timer and self.active:
                 self.timer.cancel()
