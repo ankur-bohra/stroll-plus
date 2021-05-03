@@ -60,6 +60,7 @@ class Scheduler:
         task = self.head
         if task:
             interval = (task.value["time"] - dt.datetime.now()).total_seconds()
+            # Note: Negative intervals execute instantly and are allowed in threading.Timer()
             self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
             self.timer.start()
 
