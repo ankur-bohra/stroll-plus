@@ -56,6 +56,7 @@ class Scheduler:
         task = self.head
         interval = task.value["time"] - dt.datetime.now()
         self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
+        self.timer.start()
 
     def start(self):
         '''Start the scheduler.
