@@ -32,7 +32,8 @@ class Scheduler:
         else:
             node = self.head
             while node:
-                if node.next and node.value["time"] < time < node.next.value["time"]:
+                if (node.value["time"] < time and # task comes after current node, check if before next node
+                     time < node.next.value["time"] if node.next else True): # Don't check next node if node is tail
                     # Insert task in between
                     node.next = task
                     task.next = node.next
