@@ -37,6 +37,7 @@ class Scheduler:
                     # Insert task in between
                     node.next = task
                     task.next = node.next
+                    node.next = task
                     break
                 node = node.next
         
