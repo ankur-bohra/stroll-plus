@@ -46,9 +46,11 @@ class Scheduler:
                 self._wait_for_head()
 
     def _wrap_action(self, action):
-        action()
-        if self.active:
-            self._wait_for_head()
+        def wrapped():
+            action()
+            if self.active:
+                self._wait_for_head()
+        return wrapped
 
     def _wait_for_head(self):
         task = self.head
