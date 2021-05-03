@@ -37,6 +37,7 @@ class Scheduler:
                     node.next = task
                     task.next = node.next
                     break
+                node = node.next
         
         if head != self.head:
             # Timer needs to be changed
