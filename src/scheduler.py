@@ -54,7 +54,7 @@ class Scheduler:
 
     def _wait_for_head(self):
         task = self.head
-        interval = (task.value["time"] - dt.datetime.now()).total_seconds
+        interval = (task.value["time"] - dt.datetime.now()).total_seconds()
         self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
         self.timer.start()
 
