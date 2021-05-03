@@ -48,6 +48,8 @@ class Scheduler:
     def _wrap_action(self, action):
         def wrapped():
             action()
+            # Forget completed task
+            self.head = self.head.next
             if self.active:
                 self._wait_for_head()
         return wrapped
