@@ -73,7 +73,7 @@ class Scheduler:
             self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
             self.timer.start()
 
-    def start(self, auto_stop):
+    def start(self, auto_stop=False):
         '''Start the scheduler.
 
         Args:
