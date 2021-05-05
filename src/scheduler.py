@@ -79,8 +79,7 @@ class Scheduler:
         Args:
             auto_stop(bool): Whether the scheduler should stop when no tasks are scheduled.
         '''
-        self.active = True
-        self._wait_for_head()
+        self.resume()
         if auto_stop is False:
             # Add daemon to keep scheduler alive
             self.add_task(dt.date.today() + dt.timedelta(days=1), lambda: print("Exiting"))
