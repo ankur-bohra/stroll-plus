@@ -25,6 +25,7 @@ class Scheduler:
             time (datetime): When the task occurs.
             action (function): Function to run when `time` is reached.
         '''
+        self._handle_terminated()
         task = TaskNode({"time": time, "action": action})
         head = self.head
         if head is None: # First task is being added
@@ -79,10 +80,25 @@ class Scheduler:
         Args:
             auto_stop(bool): Whether the scheduler should stop when no tasks are scheduled.
         '''
+        self._handle_terminated()
         self.resume()
         if auto_stop is False:
             # Add daemon to keep scheduler alive
             self.add_task(dt.date.today() + dt.timedelta(days=1), lambda: print("Exiting"))
+
+    def terminate(self):
+        '''Stop the scheduler.
+
+        Detaches the head and marks scheduler as terminated.
+        '''
+        self._handle_terminated()
+        self.pause()
+        self.head = None
+        self.active = "TERMINATED"
+
+    def _handle_terminated(self):
+        if self.active == "TERMINATED":
+            raise Exception("Can not use terminated scheduler.")
 
     def pause(self, timeToLast=-1):
         '''Pause the scheduler.
@@ -92,6 +108,7 @@ class Scheduler:
 
             Note that the scheduler's activity is reverted, not toggled.
         '''
+        self._handle_terminated()
         self.active = False
         if timeToLast>=0:
             self.timer.cancel()
@@ -105,6 +122,7 @@ class Scheduler:
         
             Note that the scheduler's activity is reverted, not toggled.
         '''
+        self._handle_terminated()
         self.active = True
         self._wait_for_head()
         if timeToLast>=0:
