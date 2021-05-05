@@ -84,20 +84,28 @@ class Scheduler:
             # Add daemon to keep scheduler alive
             self.add_task(dt.date.today() + dt.timedelta(days=1), lambda: print("Exiting"))
 
-    def pause(self, delay=None):
+    def pause(self, timeToLast=-1):
         '''Pause the scheduler.
 
         Args:
-            delay(int, optional): Number of seconds to pause the scheduler for.
+            timeToLast(float, optional): Number of seconds to pause the scheduler for.
+
+            Note that the scheduler's activity is reverted, not toggled.
         '''
         self.active = False
-        if delay:
+        if timeToLast>=0:
             self.timer.cancel()
-            time.sleep(delay)
-            self.resume()
+            threading.Timer(timeToLast, lambda: self.resume())
     
-    def resume(self):
+    def resume(self, timeToLast=-1):
         '''Resume the scheduler.
+
+        Args:
+            timeToLast(float, optional): Number of seconds to resume the scheduler for.
+        
+            Note that the scheduler's activity is reverted, not toggled.
         '''
         self.active = True
         self._wait_for_head()
+        if timeToLast>=0:
+            threading.Timer(timeToLast, lambda: self.pause())
