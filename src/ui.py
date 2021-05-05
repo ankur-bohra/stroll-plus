@@ -5,11 +5,10 @@
 import datetime as dt
 import sys
 from threading import Timer
-import glob
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QClipboard, QFont, QIcon, QKeySequence, QFontDatabase
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QAction, QActionGroup, QPushButton, QScrollArea, QSizePolicy, QStatusBar, QFrame, QMenuBar
+from PyQt5.QtGui import QIcon, QKeySequence, QFontDatabase
+from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QAction, QActionGroup, QPushButton, QScrollArea, QStatusBar, QFrame, QMenuBar
 
 from linker import Pause, Resume
 
