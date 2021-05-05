@@ -39,13 +39,13 @@ class Scheduler:
                 if notTail:
                     beforeNextNode = time < node.next.value["time"]
                 else:
-                    beforeNextNode = True
+                    beforeNextNode = True # allow all times at the tail
 
-                if afterNode and beforeNextNode:
+                if afterNode and beforeNextNode: # Add task after current node
                     task.next = node.next
                     node.next = task
                     break
-                elif isHead and not afterNode: # task comes before head
+                elif isHead and not afterNode: # Add task before current node (head)
                     task.next = node
                     self.head = task
                 node = node.next
@@ -69,15 +69,21 @@ class Scheduler:
         task = self.head
         if task:
             interval = (task.value["time"] - dt.datetime.now()).total_seconds()
-            # Note: Negative intervals execute instantly and are allowed in threading.Timer()
+            # NOTE: Negative intervals execute instantly and are allowed in threading.Timer()
             self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
             self.timer.start()
 
-    def start(self):
+    def start(self, auto_stop):
         '''Start the scheduler.
+
+        Args:
+            auto_stop(bool): Whether the scheduler should stop when no tasks are scheduled.
         '''
         self.active = True
         self._wait_for_head()
+        if auto_stop is False:
+            # Add daemon to keep scheduler alive
+            self.add_task(dt.date.today() + dt.timedelta(days=1), lambda: print("Exiting"))
 
     def pause(self, delay=None):
         '''Pause the scheduler.
