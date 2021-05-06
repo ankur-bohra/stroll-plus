@@ -313,7 +313,7 @@ class Window(QMainWindow):
                 .do("setStyleSheet", '''
                     font-family: Segoe UI Semibold;
                     font-size: 15px;
-                    color: gray;
+                    color: "#a3a3a3";
                 ''')\
                 .do("move", 17, 65)\
                 .get()
@@ -329,7 +329,7 @@ class Window(QMainWindow):
                 .get()
 
         copyLink = w(QPushButton("📋", card))\
-                    .do("setStyleSheet", "font-size: 13px;")\
+                    .do("setStyleSheet", "font-size: 17px;")\
                     .do("setStatusTip", "Copy meeting link.")\
                     .do("move", 825, 65)\
                     .get()
@@ -353,7 +353,7 @@ class Window(QMainWindow):
     def _createHLine(self, type="Major", parent=None):
         line = w(QFrame(parent or self))\
                 .do("setFixedSize", 900, 2)\
-                .do("setStyleSheet", f"background-color: {'red' if type == 'Major' else '#dedede'}")\
+                .do("setStyleSheet", f"background-color: {'#d5d5d5' if type == 'Major' else '#e9e9e9'}")\
                 .get()
         return line
 
