@@ -7,10 +7,14 @@ import sys
 from threading import Timer
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QKeySequence, QFontDatabase, QWindow
-from PyQt5.QtWidgets import QApplication, QDoubleSpinBox, QLabel, QLineEdit, QMainWindow, QMenu, QAction, QActionGroup, QPushButton, QScrollArea, QStatusBar, QFrame, QMenuBar, QWidgetAction
+from PyQt5.QtGui import QIcon, QKeySequence
+from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication,
+                             QDoubleSpinBox, QFrame, QLabel, QMainWindow,
+                             QMenu, QMenuBar, QPushButton, QScrollArea,
+                             QStatusBar, QWidgetAction)
 
 import linker
+
 
 class w():
     '''Wrapper class that makes an object's functions chainable
