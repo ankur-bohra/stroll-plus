@@ -248,7 +248,7 @@ class Window(QMainWindow):
 
         header = w(QFrame(body))\
             .do("setFixedSize", 900, 50)\
-            .do("setStyleSheet","background-color: #fafafa")\
+            .do("setStyleSheet","background-color: #fafafa; border: none")\
             .get()
 
         heading = w(QLabel("Meetings", header))\
@@ -277,7 +277,7 @@ class Window(QMainWindow):
                                 .get()
 
         meetingsContainer = w(QFrame(meetingsScrollable, objectName="MeetingsContainer"))\
-                                .do("setStyleSheet", "background-color: black; border-style: none")\
+                                .do("setStyleSheet", "border-style: none")\
                                 .do("setFixedWidth", 900)\
                                 .get()
 
@@ -323,7 +323,6 @@ class Window(QMainWindow):
                 .do("setStyleSheet",'''
                     font-family: Segoe UI;
                     font-size: 15px;
-                    color: gray;
                 ''')\
                 .do("setOpenExternalLinks", True)\
                 .do("move", 115, 65)\
@@ -353,10 +352,8 @@ class Window(QMainWindow):
 
     def _createHLine(self, type="Major", parent=None):
         line = w(QFrame(parent or self))\
-                .do("setFrameShape", QFrame.HLine)\
-                .do("setFrameShadow", QFrame.Shadow.Sunken)\
                 .do("setFixedSize", 900, 2)\
-                .do("setStyleSheet", f"background-color: {'#dedede' if type == 'Major' else '#dedede'}")\
+                .do("setStyleSheet", f"background-color: {'red' if type == 'Major' else '#dedede'}")\
                 .get()
         return line
 
