@@ -7,10 +7,10 @@ import sys
 from threading import Timer
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QKeySequence, QFontDatabase
-from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QMenu, QAction, QActionGroup, QPushButton, QScrollArea, QStatusBar, QFrame, QMenuBar
+from PyQt5.QtGui import QIcon, QKeySequence, QFontDatabase, QWindow
+from PyQt5.QtWidgets import QApplication, QDoubleSpinBox, QLabel, QLineEdit, QMainWindow, QMenu, QAction, QActionGroup, QPushButton, QScrollArea, QStatusBar, QFrame, QMenuBar, QWidgetAction
 
-from linker import Pause, Resume
+import linker
 
 class w():
     '''Wrapper class that makes an object's functions chainable
@@ -54,7 +54,7 @@ class Window(QMainWindow):
         self._createMenuBar()
         self._createBody()
         self._createStatusBar()
-    
+
     def _createMenuBar(self):
         menuBar = self.menuBar()
         # MEETING MENU
@@ -88,15 +88,16 @@ class Window(QMainWindow):
         joiningMenu = QMenu("&Joining", self, objectName="Joining")
         joiningMenu.menuAction().setStatusTip("Pause automatic joining.")
 
-        paused = w(QAction("&Paused", self))\
+        paused = w(QAction("&Paused", self, objectName="PauseIndicator"))\
                     .do("setShortcut", QKeySequence("Ctrl+P"))\
                     .do("setShortcutVisibleInContextMenu", True)\
                     .do("setCheckable", True)\
                     .get()
-        paused.triggered.connect(self._action_pause())
+        paused.triggered.connect(lambda: self._changeSchedulerActivity("Pause" if paused.isChecked() else "Resume")) # NOTE: Ran after toggle
+        self.findChild(QAction, "PauseIndicator").setStatusTip("Yup")
 
-        shortPauseSubMenu = QMenu("&Briefly Pause", self, objectName="Briefly Pause")
-        pauseGroup = QActionGroup(self)
+        shortPauseSubMenu = QMenu("&Briefly Pause", self, objectName="PauseOptions")
+        pauseGroup = QActionGroup(self, objectName="PauseGroup")
         pauseGroup.setExclusive(True)
         for pauseTime in (1,5,10):
             suffix = '' if pauseTime == 1  else 's'
@@ -105,17 +106,28 @@ class Window(QMainWindow):
                         .do("setActionGroup", pauseGroup)\
                         .get()
             shortPauseSubMenu.addAction(pause)
-            pause.triggered.connect(self._action_pause(pauseTime))
+            pause.triggered.connect(lambda: self._changeSchedulerActivity("Pause", pauseTime))
 
-        customPause = w(QAction("Set &Custom Pause", self))\
+        customPause = w(QAction("&Set Custom Pause", self))\
                         .do("setCheckable", True)\
+                        .do("setActionGroup", pauseGroup)\
                         .get()
-        customPause.triggered.connect(self._action_pause(-1))
 
-        pauseGroup.addAction(customPause)
+        customPauseAcceptor = w(QWidgetAction(self))\
+                                .get()
+        pauseValue = w(QDoubleSpinBox(self))\
+                        .do("setRange", 0, 180)\
+                        .do("setSuffix", " minutes")\
+                        .do("setDecimals", 2)\
+                        .do("setAlignment", Qt.AlignmentFlag.AlignRight)\
+                        .do("setValue", 3)\
+                        .get()
+        customPauseAcceptor.setDefaultWidget(pauseValue)
+
+        customPause.triggered.connect(lambda: self._changeSchedulerActivity("Pause", pauseValue.value()))
         w(shortPauseSubMenu)\
             .do("addSeparator")\
-            .do("addAction", customPause)
+            .do("addActions", (customPause, customPauseAcceptor))
 
         w(joiningMenu)\
             .do("addAction", paused)\
@@ -144,15 +156,30 @@ class Window(QMainWindow):
                         .do("setCheckable", True)\
                         .do("setActionGroup", autoSyncGroup)\
                         .get()
-            autoSync.triggered.connect(self._action_pause(pauseTime))
+            autoSync.triggered.connect(lambda: self._changeSyncDelay(syncTime))
             if syncTime == 10:
                 autoSync.setChecked(True)
             autoSyncSubSubMenu.addAction(autoSync)
-        customSync = QAction("Set &Custom Delay", self)
-        customSync.triggered.connect(self._action_pause(-1))
+
+        customSync = w(QAction("&Set Custom Delay", self))\
+                        .do("setCheckable", True)\
+                        .do("setActionGroup", autoSyncGroup)\
+                        .get()
+        customSyncAcceptor = w(QWidgetAction(self))\
+                                .get()
+        syncValue = w(QDoubleSpinBox(self))\
+                        .do("setRange", 5, 60)\
+                        .do("setSuffix", " minutes")\
+                        .do("setDecimals", 2)\
+                        .do("setAlignment", Qt.AlignmentFlag.AlignRight)\
+                        .do("setValue", 15)\
+                        .get()
+        customSyncAcceptor.setDefaultWidget(syncValue)
+        customSync.triggered.connect(lambda: self._changeSyncDelay(syncValue.value()))
+    
         w(autoSyncSubSubMenu)\
             .do("addSeparator")\
-            .do("addAction", customSync)
+            .do("addActions", (customSync, customSyncAcceptor))
 
         linkGoogleAccount = QAction("&Link Google Account", self)
         removeAccount = QAction("&Remove Account", self)
@@ -325,12 +352,6 @@ class Window(QMainWindow):
                 .get()
         return line
 
-    def _action_pause(self, time=None):
-        if time:
-            return lambda: Pause()
-        else:
-            return lambda: Resume()
-
     def _action_preferences(self):
         return True
 
@@ -338,8 +359,23 @@ class Window(QMainWindow):
         self.application.clipboard().setText(link)
         self._showStatusMessage("Copied.", 1)
 
+    def _changeSchedulerActivity(self, action, time=-1):
+        indicator = self.findChild(QAction, "PauseIndicator")
+        if action == "Pause":
+            indicator.setChecked(True)
+        elif action == "Resume":
+            indicator.setChecked(False)
+            pauseGroup = self.findChild(QActionGroup, "PauseGroup")
+            checkedAction = pauseGroup.checkedAction()
+            if checkedAction:
+                checkedAction.setChecked(False)
+        linker.changeSchedulerActivity(action, time, lambda: indicator.setChecked(not indicator.isChecked()))
+
+    def _changeSyncDelay(self, delay):
+        pass
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = Window(app)
     win.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec_() and linker.scheduler.terminate())
