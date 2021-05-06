@@ -111,7 +111,8 @@ class Scheduler:
         self._handle_terminated()
         self.active = False
         if timeToLast>=0:
-            self.timer.cancel()
+            if self.timer:
+                self.timer.cancel()
             threading.Timer(timeToLast, lambda: self.resume())
     
     def resume(self, timeToLast=-1):
