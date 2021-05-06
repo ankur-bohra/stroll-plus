@@ -14,6 +14,7 @@ def changeSchedulerActivity(action, timeToLast=-1, callback=None):
         newAction(string): The action to perform on the scheduler. "Pause" or "Resume".
         timeToLast(float, optional): No. of seconds to change to newAcitivty for before reverting.
     '''
+    action = action.lower()
     if hasattr(scheduler, action):
         getattr(scheduler, action)(timeToLast)
         if callback:
