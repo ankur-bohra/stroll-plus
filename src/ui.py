@@ -147,7 +147,14 @@ class Window(QMainWindow):
 
         syncingSubMenu = QMenu("&Syncing", self, objectName="Syncing")
 
+        enableSyncing = w(QAction("&Enable Syncing", self))\
+                            .do("setCheckable", True)\
+                            .do("setChecked", False)\
+                            .do("setEnabled", False)\
+                            .get()
+
         autoSyncSubSubMenu = QMenu("&Automatically Sync", self, objectName="Automatically Sync")
+        autoSyncSubSubMenu.setEnabled(False)
         autoSyncGroup = QActionGroup(self)
         autoSyncGroup.setExclusive(True)
         for syncTime in (5,10,30):
@@ -186,6 +193,7 @@ class Window(QMainWindow):
         removeAccount.setEnabled(False)
 
         w(syncingSubMenu)\
+            .do("addAction", enableSyncing)\
             .do("addMenu", autoSyncSubSubMenu)\
             .do("addSeparator")\
             .do("addActions", (linkGoogleAccount, removeAccount))
