@@ -3,6 +3,7 @@
 # Check if meeting is left in meetings menu
 
 import datetime as dt
+import json
 import sys
 from threading import Timer
 
@@ -15,6 +16,9 @@ from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication,
 
 import linker
 
+theme_name = "light"
+with open(f"themes/{theme_name}.json", "r") as themeFile:
+    theme = json.load(themeFile)
 
 class w():
     '''Wrapper class that makes an object's functions chainable
@@ -146,8 +150,8 @@ class Window(QMainWindow):
                     .do("setShortcut", QKeySequence("Ctrl+,"))\
                     .do("setShortcutVisibleInContextMenu", True)\
                     .get()
-        theme = QAction("Color &Theme", self)
-        preferencesSubMenu.addActions((settings, theme))
+        colorAndTheme = QAction("Color &Theme", self)
+        preferencesSubMenu.addActions((settings, colorAndTheme))
 
         syncingSubMenu = QMenu("&Syncing", self, objectName="Syncing")
 
@@ -227,7 +231,7 @@ class Window(QMainWindow):
             .do("addMenu", joiningMenu)\
             .do("addMenu", editMenu)\
             .do("addMenu", helpMenu)\
-            .do("setStyleSheet", "background-color: #f0f0f0")
+            .do("setStyleSheet", f"background-color: {theme['backgrounds']['menuBar']}")
 
     def _createStatusBar(self):
         statusBar = self.statusBar()
@@ -252,14 +256,14 @@ class Window(QMainWindow):
 
         header = w(QFrame(body))\
             .do("setFixedSize", 900, 50)\
-            .do("setStyleSheet","background-color: #fafafa; border: none")\
+            .do("setStyleSheet",f"background-color: {theme['backgrounds']['header']}; border: none")\
             .get()
 
         heading = w(QLabel("Meetings", header))\
-                    .do("setStyleSheet", '''
+                    .do("setStyleSheet", f'''
                             font-family: Segoe UI Semibold;
                             font-size: 18px;
-                            color: #2e2e2e;
+                            color: {theme['foregrounds']['heading']};
                         ''')\
                     .do("setAlignment", Qt.AlignCenter)\
                     .get()
@@ -275,7 +279,7 @@ class Window(QMainWindow):
                                 .do("setFixedSize", 900, body.height()-50)\
                                 .do("move", 0, 54)\
                                 .do("setWidgetResizable", True)\
-                                .do("setStyleSheet", "background-color: #f4f4f4; border-style: none none dotted; border-width:1px")\
+                                .do("setStyleSheet", f"background-color: {theme['backgrounds']['meetingsScrollable']}; border-style: none none dotted; border-width:1px")\
                                 .do("setVerticalScrollBarPolicy", Qt.ScrollBarPolicy.ScrollBarAlwaysOn)\
                                 .do("setHorizontalScrollBarPolicy", Qt.ScrollBarPolicy.ScrollBarAlwaysOff)\
                                 .get()
@@ -301,23 +305,23 @@ class Window(QMainWindow):
         card = w(QFrame(meetingsContainer))\
                 .do("setFixedSize", 880, 107)\
                 .do("move", 0, (len(self.meetings)-1) * 107)\
-                .do("setStyleSheet", "background-color: white")\
+                .do("setStyleSheet", f"background-color: {theme['backgrounds']['card']}")\
                 .get()
 
         name = w(QLabel(name, card))\
-                .do("setStyleSheet", '''
+                .do("setStyleSheet", f'''
                         font-family: Segoe UI Semibold;
                         font-size: 26px;
-                        color: #454545;
+                        color: {theme['foregrounds']['cardName']};
                     ''')\
                 .do("move", 18, 26)\
                 .get()
 
         time = w(QLabel("⏱  " + time.strftime("%I:%M %p").lstrip("0"), card))\
-                .do("setStyleSheet", '''
+                .do("setStyleSheet", f'''
                     font-family: Segoe UI Semibold;
                     font-size: 15px;
-                    color: "#a3a3a3";
+                    color: {theme['foregrounds']['cardTime']};
                 ''')\
                 .do("move", 17, 65)\
                 .get()
@@ -357,7 +361,7 @@ class Window(QMainWindow):
     def _createHLine(self, type="Major", parent=None):
         line = w(QFrame(parent or self))\
                 .do("setFixedSize", 900, 2)\
-                .do("setStyleSheet", f"background-color: {'#d5d5d5' if type == 'Major' else '#e9e9e9'}")\
+                .do("setStyleSheet", f"background-color: {theme['backgrounds']['line'+type]}")\
                 .get()
         return line
 
