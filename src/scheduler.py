@@ -84,7 +84,7 @@ class Scheduler:
         self.resume()
         if auto_stop is False:
             # Add daemon to keep scheduler alive
-            self.add_task(dt.date.now() + dt.timedelta(days=1), lambda: print("Exiting"))
+            self.add_task(dt.datetime.now() + dt.timedelta(days=1), lambda: print("Exiting"))
 
     def terminate(self):
         '''Stop the scheduler.
