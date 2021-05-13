@@ -1,6 +1,7 @@
 import sys
 import ctypes
 
+from threading import Timer
 from PyQt5.QtGui import (QIcon)
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon)
 
@@ -8,6 +9,9 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon)
 class StrollWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # WINDOW ATTRIBUTES
+        self._statusBarMessage = "Starting up Stroll..." # Used to switch from empty message after tooltips to previous message 
 
         # WINDOW CONFIGURATION        
         self.setWindowTitle(" Stroll")
@@ -28,10 +32,23 @@ class StrollWindow(QMainWindow):
         self._createSideBar()
         self._showHome()
     
-    def _createMenuBar(): pass
-    def _createSideBar(): pass
-    def _createStatusBar(): pass
-    def _showHome(): pass
+    def _createStatusBar(self):
+        statusBar = self.statusBar()
+        statusBar.setSizeGripEnabled(False) # No use of non-functional size grip
+        statusBar.messageChanged.connect(lambda text: self._showStatusBarMessage(self._statusBarMessage))
+        self._showStatusBarMessage(self._statusBarMessage)
+
+    def _showStatusBarMessage(self, message, duration=-1):
+        oldMessage = self._statusBarMessage
+        self._statusBarMessage = message
+        self.statusBar().showMessage(message)
+        
+        if duration > 0: # Timer could be called with -1 duration but that would be bad for memory.
+            Timer(duration, lambda: self._showStatusBarMessage(oldMessage)).start()
+
+    def _createMenuBar(self): pass
+    def _createSideBar(self): pass
+    def _showHome(self): pass
 
 
 if __name__ == "__main__":
