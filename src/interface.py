@@ -35,7 +35,8 @@ class StrollWindow(QMainWindow):
     def _createStatusBar(self):
         statusBar = self.statusBar()
         statusBar.setSizeGripEnabled(False) # No use of non-functional size grip
-        statusBar.messageChanged.connect(lambda text: self._showStatusBarMessage(self._statusBarMessage))
+        # Status bar is set to an empty string if any element's status tip is displayed, hiding the actual status.
+        statusBar.messageChanged.connect(lambda text: text == "" and self._showStatusBarMessage(self._statusBarMessage))
         self._showStatusBarMessage(self._statusBarMessage)
 
     def _showStatusBarMessage(self, message, duration=-1):
