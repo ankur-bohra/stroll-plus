@@ -3,7 +3,38 @@ import ctypes
 
 from threading import Timer
 from PyQt5.QtGui import (QIcon)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon, QMenu, QAction)
+
+def createMenu(parent, text, statusTip=None, children=[], container=None):
+    '''Create a QMenu object with common properties.
+
+    Args:
+        parent(QWidget): The parent for the menu.
+        text(string): The mnemonic-containing text for the menu. Used to construct the menu objectName in pascal case.
+        statusTip(optional, string): The status tip shown on hovering over the menu.
+        children(optional, List[QAction | QMenu | str]): A list of actions, menus and "|" (for separators), to add to the menu in the given order.
+        container(optional, QWidget): The container for the menu. Must have an addMenu() method.
+    '''
+    name = text.replace("&", "") # Strip the ampersand used for mnemonic
+    name = name.title() # Capitalize first character of all words
+    name = name[0].lower() + name[1:] # Decapitalize first character of string
+    name = name.replace(" ", "") # Remove all spaces
+
+    menu = QMenu(text, parent, objectName=name)
+    if statusTip:
+        menu.setStatusTip(statusTip)
+    
+    for child in children:
+        if child == "|":
+            menu.addSeparator()
+        elif type(child) == QMenu:
+            menu.addMenu(child)
+        else:
+            menu.addAction(child)
+
+    if container:
+        container.addMenu(menu)
+    return menu
 
 
 class StrollWindow(QMainWindow):
