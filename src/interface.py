@@ -33,6 +33,10 @@ class StrollWindow(QMainWindow):
         self._showHome()
     
     def _createStatusBar(self):
+        '''Creates the status bar at the bottom of the window.
+        
+        The status bar is used to display the next meeting and its time if one is pending.
+        '''
         statusBar = self.statusBar()
         statusBar.setSizeGripEnabled(False) # No use of non-functional size grip
         # Status bar is set to an empty string if any element's status tip is displayed, hiding the actual status.
@@ -40,6 +44,12 @@ class StrollWindow(QMainWindow):
         self._showStatusBarMessage(self._statusBarMessage)
 
     def _showStatusBarMessage(self, message, duration=-1):
+        '''Shows a message on the status bar.
+
+        Args:
+            message(string): The message to display.
+            duration(optional, float): The number of seconds to display the message for, -1 for non-disappearing. Defaults to -1.
+        '''
         oldMessage = self._statusBarMessage
         self._statusBarMessage = message
         self.statusBar().showMessage(message)
