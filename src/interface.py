@@ -111,7 +111,7 @@ def createChoiceActionGroup(parent, groupName, choices, default):
         fieldWidget = QWidgetAction(parent) # Widgets can only be added using WidgetActions
         fieldWidget.setDefaultWidget(field)
 
-        actions += (action, fieldWidget)
+        actions += ("|", action, fieldWidget) # Separator goes before acceptor
     
     return actions
 
