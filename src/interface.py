@@ -176,6 +176,17 @@ class StrollWindow(QMainWindow):
     def _createMenuBar(self): pass
     def _createSideBar(self): pass
     def _showHome(self): pass
+    def _showSettings(self): pass
+    def _showMeetingPrompt(self): pass
+    def _joinMeeting(self): pass
+    def _syncMeetings(self): pass
+    def _changeStatus(self, action, duration=-1): pass
+    def _showPreferences(self): pass
+    def _changeTheme(self): pass
+    def _setSyncDelay(self, delay): pass
+    def _toggleSyncing(self): pass
+    def _linkAccount(self): pass
+    def _removeAccount(self): pass
 
 
 if __name__ == "__main__":
