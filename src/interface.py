@@ -55,7 +55,8 @@ def createAction(parent, text, trigger, checkable=False, checked=False):
         action.setChecked(checked)
     if icon:
         action.setIcon(icon)
-    action.triggered.connect(trigger)
+    if trigger:
+        action.triggered.connect(trigger)
     return action
 
 def createChoiceActionGroup(parent, groupName, choices, default):
