@@ -53,6 +53,8 @@ def createAction(parent, text, trigger, checkable=False, checked=False):
     action.setCheckable(checkable)
     if checkable:
         action.setChecked(checked)
+    if icon:
+        action.setIcon(icon)
     action.triggered.connect(trigger)
     return action
 
