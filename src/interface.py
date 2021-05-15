@@ -10,8 +10,8 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
 
     Args:
         parent(QWidget): The parent for the menu.
-        text(string): The mnemonic-containing text for the menu. Used to construct the menu objectName in pascal case.
-        statusTip(optional, string): The status tip shown on hovering over the menu.
+        text(str): The mnemonic-containing text for the menu. Used to construct the menu objectName in pascal case.
+        statusTip(optional, str): The status tip shown on hovering over the menu.
         children(optional, List[QAction | QMenu | str]): A list of actions, menus and "|" (for separators), to add to the menu in the given order.
         container(optional, QWidget): The container for the menu. Must have an addMenu() method.
     '''
