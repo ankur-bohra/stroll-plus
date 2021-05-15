@@ -3,7 +3,14 @@ import ctypes
 
 from threading import Timer
 from PyQt5.QtGui import (QIcon)
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon, QMenu, QAction)
+from PyQt5.QtWidgets import (QApplication, QDoubleSpinBox, QMainWindow, QSystemTrayIcon, QMenu, QAction, QActionGroup, QWidgetAction)
+
+def mnemonicTextToPascal(text):
+    name = text.replace("&", "") # Strip the ampersand used for mnemonic
+    name = name.title() # Capitalize first character of all words
+    name = name[0].lower() + name[1:] # Decapitalize first character of string
+    name = name.replace(" ", "") # Remove all spaces
+    return name
 
 def createMenu(parent, text, statusTip=None, children=[], container=None):
     '''Create a QMenu object with common properties.
@@ -15,10 +22,7 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
         children(optional, List[QAction | QMenu | str]): A list of actions, menus and "|" (for separators), to add to the menu in the given order.
         container(optional, QWidget): The container for the menu. Must have an addMenu() method.
     '''
-    name = text.replace("&", "") # Strip the ampersand used for mnemonic
-    name = name.title() # Capitalize first character of all words
-    name = name[0].lower() + name[1:] # Decapitalize first character of string
-    name = name.replace(" ", "") # Remove all spaces
+    name = mnemonicTextToPascal(text)
 
     menu = QMenu(text, parent, objectName=name)
     if statusTip:
