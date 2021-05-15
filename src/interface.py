@@ -49,7 +49,7 @@ def createAction(parent, text, trigger, checkable=False, checked=False):
         checkable(optional, bool): Control whether the action is checkable. Defaults to False.
         checked(optional, bool): Conrol whether the action is checked if it is checkable. Defaults to False.
     '''
-    action = QAction(text, parent)
+    action = QAction(text, parent, objectName=mnemonicTextToPascal(text))
     action.setCheckable(checkable)
     if checkable:
         action.setChecked(checked)
