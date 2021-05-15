@@ -87,7 +87,8 @@ def createChoiceActionGroup(parent, groupName, choices, default):
     actions = ()
     for actionText in choices:
         if actionText != "ACCEPTOR":
-            action = createAction(parent, actionText, choices[actionText], checkable=True, checked=actionText==default)
+            isDefault = actionText.replace("&", "")==default.replace("&", "") # Mnemonic can be omitted while calling
+            action = createAction(parent, actionText, choices[actionText], checkable=True, checked=isDefault)
             actionGroup.addAction(action)
             actions += (action,)
     
@@ -99,7 +100,7 @@ def createChoiceActionGroup(parent, groupName, choices, default):
         # Acceptor choice comes before field
         # While WidgetActions do provide a checkable property right out of the box,
         # it looks congested. Hence a separate action using the hint is made.
-        action = createAction(parent, hint, onChosen, checkable=True)
+        action = createAction(parent, hint, onChosen, checkable=True, checked=default=="ACCEPTOR")
         actionGroup.addAction(action)
 
         # Create input field
