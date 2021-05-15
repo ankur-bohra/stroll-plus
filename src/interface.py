@@ -163,7 +163,7 @@ class StrollWindow(QMainWindow):
         '''Shows a message on the status bar.
 
         Args:
-            message(string): The message to display.
+            message(str): The message to display.
             duration(optional, float): The number of seconds to display the message for, -1 for non-disappearing. Defaults to -1.
         '''
         oldMessage = self._statusBarMessage
