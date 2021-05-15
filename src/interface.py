@@ -104,7 +104,7 @@ def createChoiceActionGroup(parent, groupName, choices, default):
         actionGroup.addAction(action)
 
         # Create input field
-        field = QDoubleSpinBox(parent)
+        field = QDoubleSpinBox(parent, objectName=action.objectName+"Acceptor") # Append to given hint e.g. setCustomDurationAcceptor
         field.setRange(minValue, maxValue)
         field.setSuffix(" "+suffix) # Suffix looks better with a space before
         field.setValue(defaultValue)
