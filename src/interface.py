@@ -36,6 +36,83 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
         container.addMenu(menu)
     return menu
 
+def createAction(parent, text, trigger, checkable=False, checked=False):
+    '''Create an action with common properties.
+
+    Args:
+        parent(QWidget): The parent for the action.
+        text(string): The mnemonic-containing action text.
+        checkable(optional, bool): Control whether the action is checkable. Defaults to False.
+        checked(optional, bool): Conrol whether the action is checked if it is checkable. Defaults to False.
+    '''
+    action = QAction(text, parent)
+    action.setCheckable(checkable)
+    if checkable:
+        action.setChecked(checked)
+    action.triggered.connect(trigger)
+    return action
+
+def createChoiceActionGroup(parent, groupName, choices, default):
+    '''Create an action group with checkable actions.
+
+    Args:
+        parent(QWidget): The parent for the actions in the action group.
+        groupName(str): Name of the action group.
+        choices(Dict[str: lambda | function]): Dictionary of choice-onChosen pairs, optionally with an acceptor.
+        default(str): The default choice.
+
+    Returns:
+        A tuple of all actions in the action group.
+
+    To add a choice that accepts a float, a single pair of the following
+    format may be added:
+        "ACCEPTOR": {
+            "Hint": "Acceptor Hint"         
+                    (str): The hint showed above the input field.
+            "Range": (minValue, maxValue)   
+                    (tuple): The range of the input field.
+            "Default": defaultValue,        
+                    (optional, float): The default value of the field. Defaults to minValue 
+            "Suffix": suffix,               
+                    (optional, str): The suffix added to the field.
+            "Triggered":  onChosen          
+                    (function | lambda): The callback for when the field is chosen.
+        }
+    The field-accepting choice is always at the end and separated from
+    other choices by a separator.
+    '''
+    actionGroup = QActionGroup(parent, objectName=groupName)
+    actionGroup.setExclusive(True)
+
+    actions = ()
+    for actionText in choices:
+        if actionText != "ACCEPTOR":
+            action = createAction(parent, actionText, choices[actionText], checkable=True, checked=actionText==default)
+            actionGroup.addAction(action)
+            actions += (action,)
+    
+    # Always add acceptor at end
+    if "ACCEPTOR" in choices:
+        info = choices["ACCEPTOR"]
+        hint, suffix, onChosen = info["Hint"], info["Suffix"], info["Triggered"],
+        minValue, maxValue, defaultValue = info["Range"][0], info["Range"][1], info["Default"]
+        # Acceptor choice comes before field
+        # While WidgetActions do provide a checkable property right out of the box,
+        # it looks congested. Hence a separate action using the hint is made.
+        action = createAction(parent, hint, onChosen, checkable=True)
+        actionGroup.addAction(action)
+
+        # Create input field
+        field = QDoubleSpinBox(parent)
+        field.setRange(minValue, maxValue)
+        field.setSuffix(" "+suffix) # Suffix looks better with a space before
+        field.setValue(defaultValue)
+        fieldWidget = QWidgetAction(parent) # Widgets can only be added using WidgetActions
+        fieldWidget.setDefaultWidget(field)
+
+        actions += (action, fieldWidget)
+    
+    return actions
 
 class StrollWindow(QMainWindow):
     def __init__(self):
