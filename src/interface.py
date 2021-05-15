@@ -40,7 +40,7 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
         container.addMenu(menu)
     return menu
 
-def createAction(parent, text, trigger, checkable=False, checked=False):
+def createAction(parent, text, trigger=None, checkable=False, checked=False, icon=None):
     '''Create an action with common properties.
 
     Args:
