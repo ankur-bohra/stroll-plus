@@ -173,7 +173,80 @@ class StrollWindow(QMainWindow):
         if duration > 0: # Timer could be called with -1 duration but that would be bad for memory.
             Timer(duration, lambda: self._showStatusBarMessage(oldMessage)).start()
 
-    def _createMenuBar(self): pass
+    def _createMenuBar(self):
+        '''Creates the menu bar at the top of the window.
+
+        The menu bar provides a native interface for finer control of the application.
+        '''
+        menubar = self.menuBar()
+
+        # MEETING MENU
+        newMeeting = createAction(self, "&New Meeting", self._showMeetingPrompt)
+        joinMeeting = createAction(self, "&Join Next Meeting", self._joinMeeting)
+        syncMeetings = createAction(self, "&Sync Meetings", self._syncMeetings)
+        syncMeetings.setEnabled(False)
+
+        children = [newMeeting, joinMeeting, "|", syncMeetings]
+        meetingMenu = createMenu(self, "&Meeting", "Create or join meetings", children=children, container=menubar)
+
+        # JOINING MENU
+        pausedButton = createAction(self, "&Paused", lambda: self._changeStatus("Pause"))
+        brieflyPause = createMenu(self, "&Briefly Pause", children=createChoiceActionGroup(self, "pauseValues", {
+            "Pause for &1 minute": lambda: self._changeStatus("Pause", 1),
+            "Pause for &5 minutes": lambda: self._changeStatus("Pause", 5),
+            "Pause for &10 minutes": lambda: self._changeStatus("Pause", 10),
+            "ACCEPTOR": {
+                "Hint": "&Set Custom Pause",
+                "Range": (0, 120),
+                "Default": 30,
+                "Suffix": "mins",
+                "Triggered": lambda: self._changeStatus("Pause", self.findChild(QDoubleSpinBox, "setCustomPauseField").value())
+            }
+        }, default="Pause for 5 minutes"))
+
+        children = [pausedButton, brieflyPause]
+        createMenu(self, "&Joining", "Pause automatic joining.", children=children, container=menubar)
+        
+        # EDIT MENU
+        preferences = createMenu(self, "&Preferences", children=[
+            createAction(self, "Change Color &Theme", self._changeTheme),
+            createAction(self, "Open &Settings", self._showSettings),
+        ])
+
+        enableSyncing = createAction(self, "&Enable Syncing", self._toggleSyncing, checkable=True, checked=False)
+        enableSyncing.setEnabled(False)
+        autoSyncMenu = createMenu(self, "&Automatically Sync", children=createChoiceActionGroup(self, "syncDelay", choices={
+            "Sync every 5 minutes": lambda: self._setSyncDelay(5),
+            "Sync every 10 minutes": lambda: self._setSyncDelay(10),
+            "Sync every 30 minutes": lambda: self._setSyncDelay(30),
+            "ACCEPTOR": {
+                "Hint": "Set Custom Delay",
+                "Range": (1,90),
+                "Default": 45,
+                "Suffix": "mins",
+                "Triggered": lambda: self._setSyncDelay(self.findChild(QDoubleSpinBox, "setCustomDelayField").value())
+            }
+        }, default="Sync every 10 minutes"))
+
+        linkAccount = createAction(self, "&Link Google Account", self._linkAccount)
+        removeAccount = createAction(self, "&Remove Account", self._removeAccount)
+        removeAccount.setEnabled(False)
+
+        children = [enableSyncing, autoSyncMenu, "|", linkAccount, removeAccount]
+        syncing = createMenu(self, "&Syncing", children=children)
+
+        children = [preferences, syncing]
+        createMenu(self, "&Edit", "Edit preferences and syncing.", children, container=menubar)
+        # HELP MENU
+        about = createAction(self, "&About")
+        usage = createAction(self, "&How To Use")
+        report = createAction(self, "&Report Issue")
+        credit = createAction(self, "@ankur-bohra", icon=QIcon("icons/GitHub.png"))
+        credit.setEnabled(False)
+        
+        children = [about, usage, report, "|", credit]
+        createMenu(self, "&Help", children=children, container=menubar)
+
     def _createSideBar(self): pass
     def _showHome(self): pass
     def _showSettings(self): pass
