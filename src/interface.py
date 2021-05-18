@@ -265,6 +265,8 @@ class StrollWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = StrollWindow()
+    with open("themes/light_stroll.qss", "r") as stylesheet:
+        window.setStyleSheet(stylesheet.read())
     window.show()
 
     sys.exit(app.exec_())
