@@ -1,9 +1,15 @@
-import sys
 import ctypes
-
+import glob
+import sys
 from threading import Timer
-from PyQt5.QtGui import (QIcon)
-from PyQt5.QtWidgets import (QApplication, QDoubleSpinBox, QMainWindow, QSystemTrayIcon, QMenu, QAction, QActionGroup, QWidgetAction)
+
+from PyQt5.QtCore import QSize, Qt, pyqtProperty
+from PyQt5.QtGui import QIcon, QPixmap, QColor
+from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication,
+                             QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout,
+                             QMainWindow, QMenu, QPushButton, QSizePolicy, QSpacerItem, QSystemTrayIcon,
+                             QVBoxLayout, QWidget, QWidgetAction)
+
 
 def mnemonicTextToPascal(text):
     name = text.replace("&", "") # Strip the ampersand used for mnemonic
@@ -122,12 +128,67 @@ def createChoiceActionGroup(parent, groupName, choices, default):
     
     return actions
 
+def forceAspectRatio(widget, ratio):
+    '''Forces a widget to resize with an aspect ratio.
+
+    Args:
+        widget(QWidget): The widget that will be resized.
+        ratio(float): The ratio of the widget's height to its width.
+    '''
+    sidebar = widget.parent().findChild(QFrame, "sidebar")
+    scale = QSize(100, ratio*100)
+    def resizeEvent(event):
+        size = QSize(scale)
+        size.scale(event.size(), Qt.AspectRatioMode.KeepAspectRatio)
+        widget.resize(size)
+    # widget.sizeHint = sizeHint
+    widget.resizeEvent = resizeEvent
+
+def makeButtonIconDynamic(pushButton, size, ratio):
+    '''Allows a QPushButton to resize its icon with the button itself.
+
+    Args:
+        pushButton(QPushButton): The button that will resize its icon.
+        size(QSize): The size of the icon at any scale. Used to maintain aspect ratio.
+        ratio(float): The ratio of the icon size to the button size. This allows "padding" around the icon.
+    '''
+    oldEvent = pushButton.resizeEvent
+    def wrapped(event):
+        oldEvent(event)
+        iconSize = QSize(size) # Use original pixmap size for scaling.
+        iconSize.scale(pushButton.size() * ratio, Qt.KeepAspectRatio) # Icon must be scaled to provide padding
+        pushButton.setIconSize(iconSize)
+    pushButton.resizeEvent = wrapped
+
+def alphaAwareFill(pixmap, color):
+    '''Fills an pixmap with the specified color alpha adjusted.
+
+    Args:
+        pixmap(QPixmap): The pixmap to fill with color.
+        color(QColor): The color to fill the object with.
+    
+    Returns:
+        The filled pixmap.
+    '''
+    # Pixmaps are meant for displaying and don't support modification
+    # to pixels, while images do.
+    image = pixmap.toImage()
+    
+    for y in range(image.height()):
+        for x in range(image.width()):
+            color.setAlpha(image.pixelColor(x, y).alpha())
+            image.setPixelColor(x, y, color)
+    
+    pixmap = QPixmap.fromImage(image)
+    return pixmap
+
 class StrollWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # WINDOW ATTRIBUTES
         self._statusBarMessage = "Starting up Stroll..." # Used to switch from empty message after tooltips to previous message 
+        self._activeBoard = None # e.g. calendar, home, ...
 
         # WINDOW CONFIGURATION        
         self.setWindowTitle(" Stroll")
@@ -138,14 +199,13 @@ class StrollWindow(QMainWindow):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Stroll")
         # setWindowIcon() will now affect window and taskbar icons.
         self.setWindowIcon(appIcon)
-        # Ideal size is fairly subjective, but too small and the application looks too lazy.
         self.resize(900, 450)
         self.setMinimumSize(900, 450)
 
         # WINDOW FILLING
         self._createStatusBar()
         self._createMenuBar()
-        self._createSideBar()
+        self._createBody()
         self._showHome()
     
     def _createStatusBar(self):
@@ -206,7 +266,7 @@ class StrollWindow(QMainWindow):
 
         children = [pausedButton, brieflyPause]
         createMenu(self, "&Joining", "Pause automatic joining.", children=children, container=menubar)
-        
+
         # EDIT MENU
         preferences = createMenu(self, "&Preferences", children=[
             createAction(self, "Change Color &Theme", self._changeTheme),
@@ -247,14 +307,125 @@ class StrollWindow(QMainWindow):
         children = [about, usage, report, "|", credit]
         createMenu(self, "&Help", children=children, container=menubar)
 
-    def _createSideBar(self): pass
-    def _showHome(self): pass
-    def _showSettings(self): pass
+    def _createBody(self):
+        '''Creates the sidebar and board.
+        '''
+        sidebar = QFrame(self, objectName="sidebar")
+
+        board = QFrame(self, objectName="board")
+
+        container = QFrame(self)
+        self.setCentralWidget(container)
+        # A ratio must be maintained between the sidebar and the board. This
+        # can be done using a horizontal layout or a grid. WHile a horizontal 
+        # layout seems more intuitive, implementing the ratio is significantly
+        # simpler using grids and columnspans.
+        grid = QGridLayout(container)
+        grid.setSpacing(0) # Grid shouldn't have any gaps inside
+        grid.setContentsMargins(0, 0, 0, 0) # or outside
+        grid.addWidget(sidebar, 0, 0, 1, 1)
+        # Board should have a width ~10x that of the sidebar
+        # So it must occupy 10 columns if the sidebar occupies one
+        grid.addWidget(board, 0, 1, 1, 10)
+        
+        self._fillSidebar(sidebar)
+
+    def _fillSidebar(self, sidebar):
+        '''Fills the sidebar with functional buttons
+        '''
+        # Button needs to be horizontally center-aligned. addWidget() does have an
+        # alignment argument but it works really wonky and the size of the widgets
+        # gets fixed for whatever reason. A HBoxLayout is used to maintain this
+        # alignment and a holder widget is used to add the layout.
+        grid = QGridLayout(sidebar)
+        buttons = glob.glob("icons/sidebar/*.png")
+        for i in range(len(buttons)):
+            buttons[i] = buttons[i].split("\\")[-1][0:-4] # icons/sidebar\\Settings.png -> Settings.png -> Settings
+
+        # While desigining icons actually had different paddings amongst each
+        # other and along their dimensions. However this makes the logic very
+        # chaotic and require several hardcoded values. Instead all icons are
+        # given the same target size (since the button sizes are same), and
+        # each icon adjusts according to its own aspect ratio.
+        iconToButtonRatio = 0.7
+        for button_no in range(len(buttons)):
+            name = buttons[button_no]
+            # The button holder has the rounded corners and holds the actual push
+            # button. It is responsible for handling the resizing.
+            button = QPushButton(self, objectName=f"sidebarButton{name}")
+            button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+            button.setProperty("active", False)
+            forceAspectRatio(button, 1)
+
+            # Instead of filling the icon everytime there's a click, or precompiling
+            # the images, copies of each icon in the active and inactive states are
+            # maintained. The button switches between these icons according to its own
+            # state.
+            pixmap = QPixmap(f"icons/sidebar/{name}.png")
+            INACTIVE_BTN_ICON_COLOR = "#707169"
+            ACTIVE_BTN_ICON_COLOR = "#3B3C37"
+            # QColor can take an rgb hex-formatted string, no conversion is required
+            # Icons are going to be used out of this scope, a convenient way to access
+            # them is to look up an attribute.
+            button.inactiveIcon = QIcon(alphaAwareFill(pixmap, QColor(INACTIVE_BTN_ICON_COLOR)))
+            button.activeIcon = QIcon(alphaAwareFill(pixmap, QColor(ACTIVE_BTN_ICON_COLOR)))
+            # The default state is inactive for all.The default board is the home board,
+            # but that state change is handled when the home board is shown.
+            makeButtonIconDynamic(button, pixmap.size(), iconToButtonRatio)
+            button.setIcon(button.inactiveIcon)
+            button.clicked.connect(getattr(self, f"_show{name}"))
+            grid.addWidget(button, button_no*2 + 1, 1) # Every odd row is occupied by a button.
+
+        # Grid is made with uniform rows everywhere to maintain even margins.
+        for row_no in range(0, len(buttons)*2+1):
+            grid.setRowStretch(row_no, 1)
+
+    def _activateSidebarButton(self, name):
+        '''Activates the specified button and deactivaties the active button.
+
+        NOTE: This method must be called BEFORE changing the board.
+        
+        Args:
+            name(str): The name of the button to be activated.
+        '''
+        if name == self._activeBoard:
+            # No change required
+            return
+
+        button = self.findChild(QPushButton, f"sidebarButton{name}")
+        button.setProperty("active", True)
+        # Activate new button
+        button.setIcon(button.activeIcon)
+        button.resize(button.size()) # The changed icon must be scaled to fit the current size
+        # Deactivate old button
+        if self._activeBoard and self._activeBoard != name:
+            oldButton = self.findChild(QPushButton, f"sidebarButton{self._activeBoard}")
+            oldButton.setProperty("active", False)
+            if oldButton:
+                oldButton.setIcon(oldButton.inactiveIcon)
+                oldButton.resize(oldButton.size())
+
+        #with open("themes/light_stroll.qss", "r") as stylesheet:
+        styleSheet = self.styleSheet()
+        self.setStyleSheet("")
+        self.setStyleSheet(styleSheet)
+
+    def _showHome(self):
+        self._activateSidebarButton("Home")
+        self._activeBoard = "Home"
+
+    def _showSettings(self):
+        self._activateSidebarButton("Settings")
+        self._activeBoard = "Settings"
+
+    def _showCalendar(self):
+        self._activateSidebarButton("Calendar")
+        self._activeBoard = "Calendar"
+
     def _showMeetingPrompt(self): pass
     def _joinMeeting(self): pass
     def _syncMeetings(self): pass
     def _changeStatus(self, action, duration=-1): pass
-    def _showPreferences(self): pass
     def _changeTheme(self): pass
     def _setSyncDelay(self, delay): pass
     def _toggleSyncing(self): pass
@@ -268,5 +439,4 @@ if __name__ == "__main__":
     with open("themes/light_stroll.qss", "r") as stylesheet:
         window.setStyleSheet(stylesheet.read())
     window.show()
-
     sys.exit(app.exec_())
