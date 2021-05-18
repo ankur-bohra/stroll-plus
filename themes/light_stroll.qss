@@ -1,0 +1,34 @@
+QStatusBar, QMenuBar, QMenuBar::item {
+    background-color: #F8F8F8;
+    color: #000000;
+}
+
+QMainWindow { background-color: gray }
+
+QFrame#sidebar { background-color: #FFFFFF }
+
+QFrame#board { background-color: #FFF2E5 }
+
+QFrame#sidebarButtonHolder {
+    background-color: red
+}
+
+QPushButton {
+    background-color: #FFFFFF;
+    border-radius: 6px;
+}
+
+QPushButton[active="true"] {
+    background-color: #FFF2E5;
+}
+QPushButton:hover {background-color: #FFFAF4;}
+/* Hover for active button needs to be overridden since hover takes precedence over property apparently. */
+QPushButton[active="true"]:hover {background-color: #FFF2E5;}
+
+/*
+SIDEBAR: #FFFFFF
+BTN BG HOVER: #FFFAF4
+BTN BG ACTIVE: #FFF2E5
+BTN INACTIVE: #707169
+BTN ACTIVE: #3B3C37
+*/
