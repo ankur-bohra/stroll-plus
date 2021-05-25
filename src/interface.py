@@ -199,8 +199,7 @@ class StrollWindow(QMainWindow):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Stroll")
         # setWindowIcon() will now affect window and taskbar icons.
         self.setWindowIcon(appIcon)
-        self.resize(900, 450)
-        self.setMinimumSize(900, 450)
+        self.setFixedSize(900, 450)
 
         # WINDOW FILLING
         self._createStatusBar()
