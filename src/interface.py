@@ -3,10 +3,10 @@ import glob
 import sys
 from threading import Timer
 
-from PyQt5.QtCore import QSize, Qt, pyqtProperty
+from PyQt5.QtCore import QRect, QSize, Qt, pyqtProperty
 from PyQt5.QtGui import QIcon, QPixmap, QColor
 from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication,
-                             QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout,
+                             QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLayout,
                              QMainWindow, QMenu, QPushButton, QSizePolicy, QSpacerItem, QSystemTrayIcon,
                              QVBoxLayout, QWidget, QWidgetAction)
 
@@ -333,20 +333,13 @@ class StrollWindow(QMainWindow):
     def _fillSidebar(self, sidebar):
         '''Fills the sidebar with functional buttons
         '''
-        # Button needs to be horizontally center-aligned. addWidget() does have an
-        # alignment argument but it works really wonky and the size of the widgets
-        # gets fixed for whatever reason. A HBoxLayout is used to maintain this
-        # alignment and a holder widget is used to add the layout.
         grid = QGridLayout(sidebar)
         buttons = glob.glob("icons/sidebar/*.png")
         for i in range(len(buttons)):
             buttons[i] = buttons[i].split("\\")[-1][0:-4] # icons/sidebar\\Settings.png -> Settings.png -> Settings
 
-        # While desigining icons actually had different paddings amongst each
-        # other and along their dimensions. However this makes the logic very
-        # chaotic and require several hardcoded values. Instead all icons are
-        # given the same target size (since the button sizes are same), and
-        # each icon adjusts according to its own aspect ratio.
+        # All icons are given the same target size, and each icon adjusts according
+        # to its own aspect ratio.
         iconToButtonRatio = 0.7
         for button_no in range(len(buttons)):
             name = buttons[button_no]
@@ -357,24 +350,17 @@ class StrollWindow(QMainWindow):
             button.setProperty("active", False)
             forceAspectRatio(button, 1)
 
-            # Instead of filling the icon everytime there's a click, or precompiling
-            # the images, copies of each icon in the active and inactive states are
-            # maintained. The button switches between these icons according to its own
-            # state.
+            # The button switches between premade copies of active and inactive icons.
             pixmap = QPixmap(f"icons/sidebar/{name}.png")
             INACTIVE_BTN_ICON_COLOR = "#707169"
             ACTIVE_BTN_ICON_COLOR = "#3B3C37"
-            # QColor can take an rgb hex-formatted string, no conversion is required
-            # Icons are going to be used out of this scope, a convenient way to access
-            # them is to look up an attribute.
+            # Make icons accessible directly from button.
             button.inactiveIcon = QIcon(alphaAwareFill(pixmap, QColor(INACTIVE_BTN_ICON_COLOR)))
             button.activeIcon = QIcon(alphaAwareFill(pixmap, QColor(ACTIVE_BTN_ICON_COLOR)))
-            # The default state is inactive for all.The default board is the home board,
-            # but that state change is handled when the home board is shown.
             makeButtonIconDynamic(button, pixmap.size(), iconToButtonRatio)
-            button.setIcon(button.inactiveIcon)
+            button.setIcon(button.inactiveIcon) # Default is set separately.
             button.clicked.connect(getattr(self, f"_show{name}"))
-            grid.addWidget(button, button_no*2 + 1, 1) # Every odd row is occupied by a button.
+            grid.addWidget(button, button_no*2 + 1, 0) # Every odd row is occupied by a button.
 
         # Grid is made with uniform rows everywhere to maintain even margins.
         for row_no in range(0, len(buttons)*2+1):
