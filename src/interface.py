@@ -3,11 +3,11 @@ import glob
 import sys
 from threading import Timer
 
-from PyQt5.QtCore import QRect, QSize, Qt, pyqtProperty
-from PyQt5.QtGui import QIcon, QPixmap, QColor
-from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication,
-                             QDoubleSpinBox, QFrame, QGridLayout, QHBoxLayout, QLayout,
-                             QMainWindow, QMenu, QPushButton, QSizePolicy, QSpacerItem, QSystemTrayIcon,
+from PyQt5.QtCore import QRect, QRegExp, QSize, QTime, Qt, pyqtProperty
+from PyQt5.QtGui import QIcon, QPixmap, QColor, QRegExpValidator, QValidator
+from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QDialog, QDialogButtonBox,
+                             QDoubleSpinBox, QFormLayout, QFrame, QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit,
+                             QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy, QSpacerItem, QSystemTrayIcon, QTimeEdit,
                              QVBoxLayout, QWidget, QWidgetAction)
 
 
@@ -182,6 +182,37 @@ def alphaAwareFill(pixmap, color):
     pixmap = QPixmap.fromImage(image)
     return pixmap
 
+def createMultiInputDialog(title, parent, standardButtons = None):
+    dialog = QDialog(parent)
+    dialog.setWindowTitle(" " + title) # Too close by default
+
+    grid = QGridLayout(dialog)
+    grid.setContentsMargins(0, 0, 0, 0)
+    grid.setSizeConstraint(QGridLayout.SizeConstraint.SetNoConstraint)
+
+    formContainer = QWidget(dialog, objectName="formContainer")
+    formContainer.setFixedSize(600, 270) # Window resizes to this size due to grid layout
+    formContainer.setContentsMargins(16, 16, 16, 16)
+    form = QFormLayout(formContainer)
+    form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+    dialog.form = form
+
+    feedback = QLabel(formContainer, objectName="feedback")
+    dialog.feedback = feedback
+
+    buttonBox = QDialogButtonBox()
+    buttonBox.setContentsMargins(16, 8, 16, 8)
+    buttonBox.setAttribute(Qt.WA_StyledBackground, True) # Can't be styled by default
+    dialog.buttonBox = buttonBox
+    if standardButtons:
+        buttonBox.setStandardButtons(standardButtons)
+
+    grid.addWidget(formContainer, 0, 0)
+    grid.addWidget(feedback, 1, 0, Qt.AlignmentFlag.AlignHCenter)
+    grid.addWidget(buttonBox, 2, 0)
+
+    return dialog
+
 class StrollWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -189,6 +220,7 @@ class StrollWindow(QMainWindow):
         # WINDOW ATTRIBUTES
         self._statusBarMessage = "Starting up Stroll..." # Used to switch from empty message after tooltips to previous message 
         self._activeBoard = None # e.g. calendar, home, ...
+        self._meetings = []
 
         # WINDOW CONFIGURATION        
         self.setWindowTitle(" Stroll")
@@ -240,7 +272,7 @@ class StrollWindow(QMainWindow):
         menubar = self.menuBar()
 
         # MEETING MENU
-        newMeeting = createAction(self, "&New Meeting", self._showMeetingPrompt)
+        newMeeting = createAction(self, "&New Meeting", self._showCreationPrompt)
         joinMeeting = createAction(self, "&Join Next Meeting", self._joinMeeting)
         syncMeetings = createAction(self, "&Sync Meetings", self._syncMeetings)
         syncMeetings.setEnabled(False)
@@ -312,6 +344,7 @@ class StrollWindow(QMainWindow):
         sidebar = QFrame(self, objectName="sidebar")
 
         board = QFrame(self, objectName="board")
+        self._board = board
 
         container = QFrame(self)
         self.setCentralWidget(container)
@@ -347,6 +380,7 @@ class StrollWindow(QMainWindow):
             button = QPushButton(self, objectName=f"sidebarButton{name}")
             button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
             button.setProperty("active", False)
+            button.setProperty("type", "sidebarButton")
             forceAspectRatio(button, 1)
 
             # The button switches between premade copies of active and inactive icons.
@@ -399,6 +433,23 @@ class StrollWindow(QMainWindow):
         self._activateSidebarButton("Home")
         self._activeBoard = "Home"
 
+        if len(self._meetings) == 0:
+            # Show blank new meeting page
+            newMeeting = QPushButton(self)
+            newMeeting.setProperty("type", "boardButton")
+            newMeeting.setIcon(QIcon(alphaAwareFill(QPixmap("icons/home/add.png"), QColor("#000000"))))
+            newMeeting.setStatusTip("Create a new meeting.")
+            newMeeting.setFixedSize(50, 50)
+            newMeeting.setIconSize(QSize(50, 50))
+            newMeeting.move(460, 190)
+            newMeeting.clicked.connect(self._showCreationPrompt)
+
+            label = QLabel("New Meeting", self)
+            label.setFixedSize(202, 45)
+            label.setProperty("type", "boardButtonLabel")
+            label.move(385, 250)
+            # Segoe UI Semibold 21
+
     def _showSettings(self):
         self._activateSidebarButton("Settings")
         self._activeBoard = "Settings"
@@ -407,7 +458,59 @@ class StrollWindow(QMainWindow):
         self._activateSidebarButton("Calendar")
         self._activeBoard = "Calendar"
 
-    def _showMeetingPrompt(self): pass
+    def _showCreationPrompt(self):
+        dialog = createMultiInputDialog("New Meeting", self)
+        dialog.setFixedSize(600, 220)
+        dialog.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+
+        linkRegEx = QRegExp(r"(?:https?://)?(?:\w+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)")
+        # (?:https?://)? : optionally allow https:// or http://
+        # (?:\w+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain.
+        # zoom\.us/j/ : raw match
+        # (\d{9,11}) : meeting id, can be 9-11 digits
+        # \?pwd= : raw match NOTE: May be enforced to 32 characters if found to be always true.
+        # (\w+): match all alphanumeric characters
+        # (?:.+): allow instances of #success after link e.g. ?pwd=xxxxxxxxxxxxxxxxxx#success
+
+        title = QLineEdit(placeholderText="(Defaults to meeting id)")
+        # Meeting title defaults to meeting id
+        title.textChanged.connect(
+            lambda text: title.setText(
+                # Change to meeting id if 1) Title is empty and 2) Meeting id is found
+                # itemAt is a dirty method to get the `link` QLineEdit defined later
+                # NOTE: labels are stored as items before corresponding QLineEdits, hence itemAt(3) 
+                linkRegEx.cap(1) if (linkRegEx.exactMatch(dialog.form.itemAt(3).widget().text()) and text == "") else text
+            )
+        )
+        dialog.form.addRow("Title:", title)
+
+        link = QLineEdit(placeholderText="(...)zoom.us/j/xxxxxxxxx(x(x))?pwd=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(...)")
+        linkValidator = QRegExpValidator(linkRegEx)
+        link.setValidator(linkValidator)
+        # Meeting title defaults to meeting id
+        link.textChanged.connect(
+            lambda text: title.setText(
+                # Change to meeting id if 1) Title is empty and 2) Meeting id is found
+                linkRegEx.cap(1) if (linkRegEx.exactMatch(text) and title.text() == "") else title.text()
+            )
+        )
+        dialog.form.addRow("Meeting Link:", link)
+
+        time = QTimeEdit(displayFormat="hh:mm:ss AP")
+        dialog.form.addRow("Join Time:", time)
+
+        dialog.buttonBox.accepted.connect(
+            # Add meeting, destroy dialogue, show home if a valid link is found, all other data will then also be valid.
+            # addMeeting doesn't return anything.
+            lambda: self._addMeeting(title.text(), link.text(), time.time()) or dialog.destroy() or self._showHome() if linkRegEx.exactMatch(link.text()) else dialog.feedback.setText("Invalid link. Try again or send us a report!")
+        )
+        dialog.buttonBox.rejected.connect(dialog.destroy)
+        dialog.setStyleSheet(self.styleSheet())
+        dialog.show()
+
+    def _addMeeting(self, title, link, time):
+        pass
+    
     def _joinMeeting(self): pass
     def _syncMeetings(self): pass
     def _changeStatus(self, action, duration=-1): pass

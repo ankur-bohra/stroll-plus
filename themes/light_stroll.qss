@@ -3,27 +3,80 @@ QStatusBar, QMenuBar, QMenuBar::item {
     color: #000000;
 }
 
-QMainWindow { background-color: gray }
-
-QFrame#sidebar { background-color: #FFFFFF }
-
-QFrame#board { background-color: #FFF2E5 }
-
-QFrame#sidebarButtonHolder {
-    background-color: red
+QMenuBar {
+    border-bottom: 1px solid #e4e4e4
 }
 
-QPushButton {
+QStatusBar {
+    border-top: 1px solid #e4e4e4
+}
+
+/* SIDEBAR STYLES */
+QFrame#sidebar { background-color: #FFFFFF }
+
+QPushButton[type="sidebarButton"] {
     background-color: #FFFFFF;
     border-radius: 6px;
 }
 
-QPushButton[active="true"] {
+QPushButton[type="sidebarButton"]:hover { background-color: #FFFAF4 }
+QPushButton[type="sidebarButton"][active="true"] { background-color: #FFF2E5 }
+QPushButton[type="sidebarButton"][active="true"]:hover { background-color: #FFF2E5 }
+
+
+/* BOARD STYLES */
+QFrame#board { background-color: #FFF2E5 }
+
+QPushButton[type="boardButton"] {
+    background-color: #FFF2E5;
+    border: none
+}
+QPushButton[type="boardButton"]:hover { }
+QLabel[type="boardButtonLabel"] {
+    font-family: "Segoe UI Semibold", "Times New Roman";
+    font-size: 33px;
+    color: #2E2E2E;
+}
+
+/* MESSAGE BOX (PROMPT) STYLES  */
+
+/* The QWidget contains the form layout */
+/* QMessageBox {
+    background-color: #FFF2E5
+} */
+QDialog {
     background-color: #FFF2E5;
 }
-QPushButton:hover {background-color: #FFFAF4;}
-/* Hover for active button needs to be overridden since hover takes precedence over property apparently. */
-QPushButton[active="true"]:hover {background-color: #FFF2E5;}
+
+QDialog>QDialogButtonBox {
+    background-color: #F8F8F8;
+    border-top: 1px solid #e4e4e4
+}
+
+QDialog #feedback { color: red; }
+
+/*
+QMessageBox:: 
+    QLabel::qt_msgboxex_icon_label 
+    QGridLayout::
+    QLabel::qt_msgbox_label
+    QDialogButtonBox::qt_msgbox_buttonbox
+        QHBoxLayout::
+        QPushButton::
+        QPushButton::
+    QWidget::formContainer
+        QFormLayout::
+        QLabel::
+        QLineEdit::
+            QWidgetLineControl::
+        QLabel::
+        QLineEdit::
+            QWidgetLineControl::
+        QLabel::
+        QLineEdit::
+            QWidgetLineControl::
+*/
+
 
 /*
 SIDEBAR: #FFFFFF
