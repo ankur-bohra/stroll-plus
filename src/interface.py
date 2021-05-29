@@ -470,14 +470,14 @@ class StrollWindow(QMainWindow):
         dialog.setFixedSize(600, 220)
         dialog.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
 
-        linkRegEx = QRegExp(r"(?:https?://)?(?:\w+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)")
+        linkRegEx = QRegExp(r"(?:https?://)?(?:\w+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?")
         # (?:https?://)? : optionally allow https:// or http://
         # (?:\w+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain.
         # zoom\.us/j/ : raw match
         # (\d{9,11}) : meeting id, can be 9-11 digits
         # \?pwd= : raw match NOTE: May be enforced to 32 characters if found to be always true.
         # (\w+): match all alphanumeric characters
-        # (?:.+): allow instances of #success after link e.g. ?pwd=xxxxxxxxxxxxxxxxxx#success
+        # (?:.+)?: optionally allow instances of #success after link e.g. ?pwd=xxxxxxxxxxxxxxxxxx#success
 
         title = QLineEdit(placeholderText="(Defaults to meeting id)")
         # Meeting title defaults to meeting id
