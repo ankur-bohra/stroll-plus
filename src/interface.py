@@ -509,7 +509,7 @@ class StrollWindow(QMainWindow):
         dialog.buttonBox.accepted.connect(
             # Add meeting, destroy dialogue, show home if a valid link is found, all other data will then also be valid.
             # Chaining ors with non-returning functions allows multiple calls in a single statement.
-            lambda: self._addMeeting(title.text(), link.text(), time.time()) or dialog.destroy() or self._showHome() if linkRegEx.exactMatch(link.text()) else dialog.feedback.setText("Invalid link. Try again or send a report!")
+            lambda: self._addMeeting(title.text(), link.text(), time.time()) or dialog.deleteLater() or self._showHome() if linkRegEx.exactMatch(link.text()) else dialog.feedback.setText("Invalid link. Try again or send a report!")
         )
         dialog.buttonBox.rejected.connect(dialog.destroy)
         dialog.setStyleSheet(self.styleSheet())
