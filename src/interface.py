@@ -429,33 +429,40 @@ class StrollWindow(QMainWindow):
         self.setStyleSheet("")
         self.setStyleSheet(styleSheet)
 
+    def _clearBoard(self):
+        for child in self._board.findChildren(QWidget, options=Qt.FindChildOption.FindDirectChildrenOnly):
+            child.deleteLater()
+
     def _showHome(self):
         self._activateSidebarButton("Home")
+        self._clearBoard()
         self._activeBoard = "Home"
 
         if len(self._meetings) == 0:
             # Show blank new meeting page
-            newMeeting = QPushButton(self)
+            newMeeting = QPushButton(self._board)
             newMeeting.setProperty("type", "boardButton")
             newMeeting.setIcon(QIcon(alphaAwareFill(QPixmap("icons/home/add.png"), QColor("#000000"))))
             newMeeting.setStatusTip("Create a new meeting.")
             newMeeting.setFixedSize(50, 50)
             newMeeting.setIconSize(QSize(50, 50))
-            newMeeting.move(460, 190)
+            newMeeting.move(375, 160)
             newMeeting.clicked.connect(self._showCreationPrompt)
 
-            label = QLabel("New Meeting", self)
+            label = QLabel("New Meeting", self._board)
             label.setFixedSize(202, 45)
             label.setProperty("type", "boardButtonLabel")
-            label.move(385, 250)
+            label.move(300, 220)
             # Segoe UI Semibold 21
 
     def _showSettings(self):
         self._activateSidebarButton("Settings")
+        self._clearBoard()
         self._activeBoard = "Settings"
 
     def _showCalendar(self):
         self._activateSidebarButton("Calendar")
+        self._clearBoard()
         self._activeBoard = "Calendar"
 
     def _showCreationPrompt(self):
