@@ -1,22 +1,24 @@
 import ctypes
 import glob
 import sys
+import re
 from threading import Timer
 
-from PyQt5.QtCore import QRect, QRegExp, QSize, QTime, Qt, pyqtProperty
-from PyQt5.QtGui import QIcon, QPixmap, QColor, QRegExpValidator, QValidator
+from PyQt5.QtCore import QRegExp, QSize, Qt, pyqtProperty
+from PyQt5.QtGui import QFontDatabase, QIcon, QPixmap, QColor, QRegExpValidator
 from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QDialog, QDialogButtonBox,
-                             QDoubleSpinBox, QFormLayout, QFrame, QGridLayout, QHBoxLayout, QInputDialog, QLabel, QLayout, QLineEdit,
-                             QMainWindow, QMenu, QMessageBox, QPushButton, QSizePolicy, QSpacerItem, QSystemTrayIcon, QTimeEdit,
+                             QDoubleSpinBox, QFormLayout, QFrame,  QGridLayout, QLabel,QLineEdit,
+                             QMainWindow, QMenu,  QPushButton, QScrollArea, QSizePolicy, QTimeEdit,
                              QVBoxLayout, QWidget, QWidgetAction)
 
 
 def mnemonicTextToPascal(text):
-    name = text.replace("&", "") # Strip the ampersand used for mnemonic
-    name = name.title() # Capitalize first character of all words
-    name = name[0].lower() + name[1:] # Decapitalize first character of string
-    name = name.replace(" ", "") # Remove all spaces
+    name = text.replace("&", "")  # Strip the ampersand used for mnemonic
+    name = name.title()  # Capitalize first character of all words
+    name = name[0].lower() + name[1:]  # Decapitalize first character of string
+    name = name.replace(" ", "")  # Remove all spaces
     return name
+
 
 def createMenu(parent, text, statusTip=None, children=[], container=None):
     '''Create a QMenu object with common properties.
@@ -33,7 +35,7 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
     menu = QMenu(text, parent, objectName=name)
     if statusTip:
         menu.setStatusTip(statusTip)
-    
+
     for child in children:
         if child == "|":
             menu.addSeparator()
@@ -45,6 +47,7 @@ def createMenu(parent, text, statusTip=None, children=[], container=None):
     if container:
         container.addMenu(menu)
     return menu
+
 
 def createAction(parent, text, trigger=None, checkable=False, checked=False, icon=None):
     '''Create an action with common properties.
@@ -64,6 +67,7 @@ def createAction(parent, text, trigger=None, checkable=False, checked=False, ico
     if trigger:
         action.triggered.connect(trigger)
     return action
+
 
 def createChoiceActionGroup(parent, groupName, choices, default):
     '''Create an action group with checkable actions.
@@ -100,11 +104,13 @@ def createChoiceActionGroup(parent, groupName, choices, default):
     actions = ()
     for actionText in choices:
         if actionText != "ACCEPTOR":
-            isDefault = actionText.replace("&", "")==default.replace("&", "") # Mnemonic can be omitted while calling
-            action = createAction(parent, actionText, choices[actionText], checkable=True, checked=isDefault)
+            isDefault = actionText.replace("&", "") == default.replace(
+                "&", "")  # Mnemonic can be omitted while calling
+            action = createAction(
+                parent, actionText, choices[actionText], checkable=True, checked=isDefault)
             actionGroup.addAction(action)
             actions += (action,)
-    
+
     # Always add acceptor at end
     if "ACCEPTOR" in choices:
         info = choices["ACCEPTOR"]
@@ -113,19 +119,22 @@ def createChoiceActionGroup(parent, groupName, choices, default):
         # Acceptor choice comes before field
         # While WidgetActions do provide a checkable property right out of the box,
         # it looks congested. Hence a separate action using the hint is made.
-        action = createAction(parent, hint, onChosen, checkable=True, checked=default=="ACCEPTOR")
+        action = createAction(parent, hint, onChosen,
+                              checkable=True, checked=default == "ACCEPTOR")
         actionGroup.addAction(action)
 
         # Create input field
-        field = QDoubleSpinBox(parent, objectName=action.objectName()+"Field") # Append to given hint e.g. setCustomDurationAcceptor
+        # Append to given hint e.g. setCustomDurationAcceptor
+        field = QDoubleSpinBox(parent, objectName=action.objectName()+"Field")
         field.setRange(minValue, maxValue)
-        field.setSuffix(" "+suffix) # Suffix looks better with a space before
+        field.setSuffix(" "+suffix)  # Suffix looks better with a space before
         field.setValue(defaultValue)
-        fieldWidget = QWidgetAction(parent) # Widgets can only be added using WidgetActions
+        # Widgets can only be added using WidgetActions
+        fieldWidget = QWidgetAction(parent)
         fieldWidget.setDefaultWidget(field)
 
-        actions += ("|", action, fieldWidget) # Separator goes before acceptor
-    
+        actions += ("|", action, fieldWidget)  # Separator goes before acceptor
+
     return actions
 
 def forceAspectRatio(widget, ratio):
@@ -137,6 +146,7 @@ def forceAspectRatio(widget, ratio):
     '''
     sidebar = widget.parent().findChild(QFrame, "sidebar")
     scale = QSize(100, ratio*100)
+
     def resizeEvent(event):
         size = QSize(scale)
         size.scale(event.size(), Qt.AspectRatioMode.KeepAspectRatio)
@@ -153,45 +163,61 @@ def makeButtonIconDynamic(pushButton, size, ratio):
         ratio(float): The ratio of the icon size to the button size. This allows "padding" around the icon.
     '''
     oldEvent = pushButton.resizeEvent
+
     def wrapped(event):
         oldEvent(event)
-        iconSize = QSize(size) # Use original pixmap size for scaling.
-        iconSize.scale(pushButton.size() * ratio, Qt.KeepAspectRatio) # Icon must be scaled to provide padding
+        iconSize = QSize(size)  # Use original pixmap size for scaling.
+        # Icon must be scaled to provide padding
+        iconSize.scale(pushButton.size() * ratio, Qt.KeepAspectRatio)
         pushButton.setIconSize(iconSize)
     pushButton.resizeEvent = wrapped
 
 def alphaAwareFill(pixmap, color):
-    '''Fills an pixmap with the specified color alpha adjusted.
+    '''Fills a pixmap with the specified color alpha adjusted.
 
     Args:
         pixmap(QPixmap): The pixmap to fill with color.
         color(QColor): The color to fill the object with.
-    
+
     Returns:
         The filled pixmap.
     '''
     # Pixmaps are meant for displaying and don't support modification
     # to pixels, while images do.
     image = pixmap.toImage()
-    
+
     for y in range(image.height()):
         for x in range(image.width()):
             color.setAlpha(image.pixelColor(x, y).alpha())
             image.setPixelColor(x, y, color)
-    
+
     pixmap = QPixmap.fromImage(image)
     return pixmap
 
-def createMultiInputDialog(title, parent, standardButtons = None):
+def createMultiInputDialog(title, parent, standardButtons=None):
+    '''Creates a QInputDialog-like dialog that allows multiple entries.
+
+    The entries are handled using a QFormLayout accessible as the form
+    attribute. Entries are to be added to dialog.form as they would in
+    any QFormLayout.
+
+    Args:
+        title(string): The title for the dialog window.
+        parent(QWidget): The parent for the dialog.
+        standardButtons(optional, StandardButtons | StandardButton): The buttons at the bottom of the dialog.
+    
+    Returns: The dialog.
+    '''
     dialog = QDialog(parent)
-    dialog.setWindowTitle(" " + title) # Too close by default
+    dialog.setWindowTitle(" " + title)  # Too close by default
 
     grid = QGridLayout(dialog)
     grid.setContentsMargins(0, 0, 0, 0)
     grid.setSizeConstraint(QGridLayout.SizeConstraint.SetNoConstraint)
 
     formContainer = QWidget(dialog, objectName="formContainer")
-    formContainer.setFixedSize(600, 270) # Window resizes to this size due to grid layout
+    # Window resizes to this size due to grid layout
+    formContainer.setFixedSize(600, 270)
     formContainer.setContentsMargins(16, 16, 16, 16)
     form = QFormLayout(formContainer)
     form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -202,7 +228,8 @@ def createMultiInputDialog(title, parent, standardButtons = None):
 
     buttonBox = QDialogButtonBox()
     buttonBox.setContentsMargins(16, 8, 16, 8)
-    buttonBox.setAttribute(Qt.WA_StyledBackground, True) # Can't be styled by default
+    # Can't be styled by default
+    buttonBox.setAttribute(Qt.WA_StyledBackground, True)
     dialog.buttonBox = buttonBox
     if standardButtons:
         buttonBox.setStandardButtons(standardButtons)
@@ -213,16 +240,124 @@ def createMultiInputDialog(title, parent, standardButtons = None):
 
     return dialog
 
+
+def createBoardButtonLabelPair(parent, text, iconPath, statusTip=None):
+    '''Creates and shows a button-label pair styled for the board area.
+
+    Args:
+        parent(QWidget): The parent for the pair. Normally the board itself.
+        text(string): The text the label should hold.
+        iconPath(string): The relative-from-root path for the icon the button will use.
+        statusTip(optional, string): The status tip for the button.
+
+    Returns:
+        The button and the label.
+    '''
+    button = QPushButton(parent)
+    button.setProperty("type", "boardButton")
+    button.setIcon(QIcon(alphaAwareFill(QPixmap(iconPath), QColor("#000000"))))
+    button.setFixedSize(25, 25)
+    button.setIconSize(QSize(25, 25))
+    if statusTip:
+        button.setStatusTip("Create a new meeting.")
+
+    label = QLabel(text, parent)
+    label.setProperty("type", "boardButtonLabel")
+    label.setFixedSize(len(text)*14, 35)
+
+    # For whatever reason show() needs to be explicitly called after the first pair is created.
+    button.show()
+    label.show()
+    return button, label
+
+
+def createMeetingCard(title, info, time):
+    '''Creates a meeting card.
+
+    Args:
+        title(str): The title assigned to the meeting.
+        link(str): The user given link for the meeting. Reformatted for uniformity.
+        time(datetime): The time to join the meeting at.
+
+    Returns:
+        A QFrame representing the meeting.
+    '''
+    card = QFrame(objectName="meetingCard")
+    card.setFixedSize(758, 115)
+
+    name = QLabel(title, card, objectName="name")
+    name.setFixedSize(300, 40)
+    name.move(23, 23)
+
+    # RED: #902039; YELLOW: #e3dd89; GREEN: #708f6f; GREY: #939393; LINK: #365CF2; TEXT: 11
+    clockPixmap = alphaAwareFill(QPixmap("icons/home/clock.png").scaled(17, 17), QColor("#902039"))
+    clock = QLabel(card)
+    clock.setPixmap(clockPixmap)
+    clock.setFixedSize(17, 17)
+    clock.move(23, 75)
+    joinTime = QLabel("9:30 AM", card, objectName="joinTime")
+    joinTime.setFixedSize(72, 17)
+    joinTime.move(48, 74)
+
+    linkPixmap = alphaAwareFill(QPixmap("icons/home/link.png").scaled(17, 17), QColor("#939393"))
+    linkIcon = QLabel(card)
+    linkIcon.setPixmap(linkPixmap)
+    linkIcon.setFixedSize(17, 17)
+    linkIcon.move(147, 75)
+    # Links are "rebuilt" for uniformity
+    linkFormat = "https://www.zoom.us/j/{0}?pwd={1}"
+    # Only the link contains the password, it's useless and space-consuming on the card itself.
+    # Verification of the link can be done through meeting ID.
+    link = linkFormat.format(info['id'], info['pwd'])
+    text = linkFormat.format(f"<b>{info['id']}</b>", ' . . .') # Meeting IDs are bold for easier comparison.
+    richText = f"<a href='{link}'> {text} </a>"
+    meetingLink = QLabel(richText, card, objectName="link")
+    meetingLink.setOpenExternalLinks(True)
+    meetingLink.setFixedSize(378, 27)
+    meetingLink.move(172, 68)
+    meetingLink.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+    return card
+
+
+def createHomeScrollableArea(parent, cards=[]):
+    '''Creates the scrollable meetings area in the home board.
+    
+    Args:
+        parent(QWidget): The parent for the scrollable area.
+        cards(List[QWidget]): The cards to put in the scrollable area.
+    '''
+    scrollArea = QScrollArea(parent)
+    scrollArea.setVerticalScrollBarPolicy(
+        Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    scrollArea.setContentsMargins(0, 0, 0, 0)
+
+    scrollArea.setFixedSize(789, 300)
+    scrollArea.move(17, 68)
+
+    holder = QWidget(scrollArea, objectName="scrollHolder")
+    holder.setMinimumSize(758, (115+15) * len(cards)) # (Height + Padding) per card * No. of cards
+    scrollArea.setWidget(holder)
+
+    vL = QVBoxLayout(holder)
+    vL.setContentsMargins(0, 0, 0, 0)
+    for card in cards:
+        vL.addWidget(card)
+
+    scrollArea.show()
+
+
 class StrollWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # WINDOW ATTRIBUTES
-        self._statusBarMessage = "Starting up Stroll..." # Used to switch from empty message after tooltips to previous message 
-        self._activeBoard = None # e.g. calendar, home, ...
+        # Used to switch from empty message after tooltips to previous message
+        self._statusBarMessage = "Starting up Stroll..."
+        self._activeBoard = None  # e.g. calendar, home, ...
         self._meetings = []
 
-        # WINDOW CONFIGURATION        
+        # WINDOW CONFIGURATION
         self.setWindowTitle(" Stroll")
         appIcon = QIcon("icons/stroll.png")
         # setWindowIcon() should but doesn't apply the icon to the windows taskbar.
@@ -238,16 +373,18 @@ class StrollWindow(QMainWindow):
         self._createMenuBar()
         self._createBody()
         self._showHome()
-    
+
     def _createStatusBar(self):
         '''Creates the status bar at the bottom of the window.
-        
+
         The status bar is used to display the next meeting and its time if one is pending.
         '''
         statusBar = self.statusBar()
-        statusBar.setSizeGripEnabled(False) # No use of non-functional size grip
+        # No use of non-functional size grip
+        statusBar.setSizeGripEnabled(False)
         # Status bar is set to an empty string if any element's status tip is displayed, hiding the actual status.
-        statusBar.messageChanged.connect(lambda text: text == "" and self._showStatusBarMessage(self._statusBarMessage))
+        statusBar.messageChanged.connect(
+            lambda text: text == "" and self._showStatusBarMessage(self._statusBarMessage))
         self._showStatusBarMessage(self._statusBarMessage)
 
     def _showStatusBarMessage(self, message, duration=-1):
@@ -260,8 +397,9 @@ class StrollWindow(QMainWindow):
         oldMessage = self._statusBarMessage
         self._statusBarMessage = message
         self.statusBar().showMessage(message)
-        
-        if duration > 0: # Timer could be called with -1 duration but that would be bad for memory.
+
+        # Timer could be called with -1 duration but that would be bad for memory.
+        if duration > 0:
             Timer(duration, lambda: self._showStatusBarMessage(oldMessage)).start()
 
     def _createMenuBar(self):
@@ -272,16 +410,20 @@ class StrollWindow(QMainWindow):
         menubar = self.menuBar()
 
         # MEETING MENU
-        newMeeting = createAction(self, "&New Meeting", self._showCreationPrompt)
-        joinMeeting = createAction(self, "&Join Next Meeting", self._joinMeeting)
+        newMeeting = createAction(
+            self, "&New Meeting", self._showCreationPrompt)
+        joinMeeting = createAction(
+            self, "&Join Next Meeting", self._joinMeeting)
         syncMeetings = createAction(self, "&Sync Meetings", self._syncMeetings)
         syncMeetings.setEnabled(False)
 
         children = [newMeeting, joinMeeting, "|", syncMeetings]
-        meetingMenu = createMenu(self, "&Meeting", "Create or join meetings", children=children, container=menubar)
+        meetingMenu = createMenu(
+            self, "&Meeting", "Create or join meetings", children=children, container=menubar)
 
         # JOINING MENU
-        pausedButton = createAction(self, "&Paused", lambda: self._changeStatus("Pause"))
+        pausedButton = createAction(
+            self, "&Paused", lambda: self._changeStatus("Pause"))
         brieflyPause = createMenu(self, "&Briefly Pause", children=createChoiceActionGroup(self, "pauseValues", {
             "Pause for &1 minute": lambda: self._changeStatus("Pause", 1),
             "Pause for &5 minutes": lambda: self._changeStatus("Pause", 5),
@@ -296,7 +438,8 @@ class StrollWindow(QMainWindow):
         }, default="Pause for 5 minutes"))
 
         children = [pausedButton, brieflyPause]
-        createMenu(self, "&Joining", "Pause automatic joining.", children=children, container=menubar)
+        createMenu(self, "&Joining", "Pause automatic joining.",
+                   children=children, container=menubar)
 
         # EDIT MENU
         preferences = createMenu(self, "&Preferences", children=[
@@ -304,7 +447,8 @@ class StrollWindow(QMainWindow):
             createAction(self, "Open &Settings", self._showSettings),
         ])
 
-        enableSyncing = createAction(self, "&Enable Syncing", self._toggleSyncing, checkable=True, checked=False)
+        enableSyncing = createAction(
+            self, "&Enable Syncing", self._toggleSyncing, checkable=True, checked=False)
         enableSyncing.setEnabled(False)
         autoSyncMenu = createMenu(self, "&Automatically Sync", children=createChoiceActionGroup(self, "syncDelay", choices={
             "Sync every 5 minutes": lambda: self._setSyncDelay(5),
@@ -312,29 +456,34 @@ class StrollWindow(QMainWindow):
             "Sync every 30 minutes": lambda: self._setSyncDelay(30),
             "ACCEPTOR": {
                 "Hint": "Set Custom Delay",
-                "Range": (1,90),
+                "Range": (1, 90),
                 "Default": 45,
                 "Suffix": "mins",
                 "Triggered": lambda: self._setSyncDelay(self.findChild(QDoubleSpinBox, "setCustomDelayField").value())
             }
         }, default="Sync every 10 minutes"))
 
-        linkAccount = createAction(self, "&Link Google Account", self._linkAccount)
-        removeAccount = createAction(self, "&Remove Account", self._removeAccount)
+        linkAccount = createAction(
+            self, "&Link Google Account", self._linkAccount)
+        removeAccount = createAction(
+            self, "&Remove Account", self._removeAccount)
         removeAccount.setEnabled(False)
 
-        children = [enableSyncing, autoSyncMenu, "|", linkAccount, removeAccount]
+        children = [enableSyncing, autoSyncMenu,
+                    "|", linkAccount, removeAccount]
         syncing = createMenu(self, "&Syncing", children=children)
 
         children = [preferences, syncing]
-        createMenu(self, "&Edit", "Edit preferences and syncing.", children, container=menubar)
+        createMenu(self, "&Edit", "Edit preferences and syncing.",
+                   children, container=menubar)
         # HELP MENU
         about = createAction(self, "&About")
         usage = createAction(self, "&How To Use")
         report = createAction(self, "&Report Issue")
-        credit = createAction(self, "@ankur-bohra", icon=QIcon("icons/GitHub.png"))
+        credit = createAction(self, "@ankur-bohra",
+                              icon=QIcon("icons/GitHub.png"))
         credit.setEnabled(False)
-        
+
         children = [about, usage, report, "|", credit]
         createMenu(self, "&Help", children=children, container=menubar)
 
@@ -349,17 +498,17 @@ class StrollWindow(QMainWindow):
         container = QFrame(self)
         self.setCentralWidget(container)
         # A ratio must be maintained between the sidebar and the board. This
-        # can be done using a horizontal layout or a grid. WHile a horizontal 
+        # can be done using a horizontal layout or a grid. WHile a horizontal
         # layout seems more intuitive, implementing the ratio is significantly
         # simpler using grids and columnspans.
         grid = QGridLayout(container)
-        grid.setSpacing(0) # Grid shouldn't have any gaps inside
-        grid.setContentsMargins(0, 0, 0, 0) # or outside
+        grid.setSpacing(0)  # Grid shouldn't have any gaps inside
+        grid.setContentsMargins(0, 0, 0, 0)  # or outside
         grid.addWidget(sidebar, 0, 0, 1, 1)
         # Board should have a width ~10x that of the sidebar
         # So it must occupy 10 columns if the sidebar occupies one
         grid.addWidget(board, 0, 1, 1, 10)
-        
+
         self._fillSidebar(sidebar)
 
     def _fillSidebar(self, sidebar):
@@ -368,7 +517,8 @@ class StrollWindow(QMainWindow):
         grid = QGridLayout(sidebar)
         buttons = glob.glob("icons/sidebar/*.png")
         for i in range(len(buttons)):
-            buttons[i] = buttons[i].split("\\")[-1][0:-4] # icons/sidebar\\Settings.png -> Settings.png -> Settings
+            # icons/sidebar\\Settings.png -> Settings.png -> Settings
+            buttons[i] = buttons[i].split("\\")[-1][0:-4]
 
         # All icons are given the same target size, and each icon adjusts according
         # to its own aspect ratio.
@@ -378,7 +528,8 @@ class StrollWindow(QMainWindow):
             # The button holder has the rounded corners and holds the actual push
             # button. It is responsible for handling the resizing.
             button = QPushButton(self, objectName=f"sidebarButton{name}")
-            button.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+            button.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                 QSizePolicy.Policy.Preferred)
             button.setProperty("active", False)
             button.setProperty("type", "sidebarButton")
             forceAspectRatio(button, 1)
@@ -388,12 +539,15 @@ class StrollWindow(QMainWindow):
             INACTIVE_BTN_ICON_COLOR = "#707169"
             ACTIVE_BTN_ICON_COLOR = "#3B3C37"
             # Make icons accessible directly from button.
-            button.inactiveIcon = QIcon(alphaAwareFill(pixmap, QColor(INACTIVE_BTN_ICON_COLOR)))
-            button.activeIcon = QIcon(alphaAwareFill(pixmap, QColor(ACTIVE_BTN_ICON_COLOR)))
+            button.inactiveIcon = QIcon(alphaAwareFill(
+                pixmap, QColor(INACTIVE_BTN_ICON_COLOR)))
+            button.activeIcon = QIcon(alphaAwareFill(
+                pixmap, QColor(ACTIVE_BTN_ICON_COLOR)))
             makeButtonIconDynamic(button, pixmap.size(), iconToButtonRatio)
-            button.setIcon(button.inactiveIcon) # Default is set separately.
+            button.setIcon(button.inactiveIcon)  # Default is set separately.
             button.clicked.connect(getattr(self, f"_show{name}"))
-            grid.addWidget(button, button_no*2 + 1, 0) # Every odd row is occupied by a button.
+            # Every odd row is occupied by a button.
+            grid.addWidget(button, button_no*2 + 1, 0)
 
         # Grid is made with uniform rows everywhere to maintain even margins.
         for row_no in range(0, len(buttons)*2+1):
@@ -403,7 +557,7 @@ class StrollWindow(QMainWindow):
         '''Activates the specified button and deactivaties the active button.
 
         NOTE: This method must be called BEFORE changing the board.
-        
+
         Args:
             name(str): The name of the button to be activated.
         '''
@@ -415,16 +569,18 @@ class StrollWindow(QMainWindow):
         button.setProperty("active", True)
         # Activate new button
         button.setIcon(button.activeIcon)
-        button.resize(button.size()) # The changed icon must be scaled to fit the current size
+        # The changed icon must be scaled to fit the current size
+        button.resize(button.size())
         # Deactivate old button
         if self._activeBoard and self._activeBoard != name:
-            oldButton = self.findChild(QPushButton, f"sidebarButton{self._activeBoard}")
+            oldButton = self.findChild(
+                QPushButton, f"sidebarButton{self._activeBoard}")
             oldButton.setProperty("active", False)
             if oldButton:
                 oldButton.setIcon(oldButton.inactiveIcon)
                 oldButton.resize(oldButton.size())
 
-        #with open("themes/light_stroll.qss", "r") as stylesheet:
+        # with open("themes/light_stroll.qss", "r") as stylesheet:
         styleSheet = self.styleSheet()
         self.setStyleSheet("")
         self.setStyleSheet(styleSheet)
@@ -438,22 +594,35 @@ class StrollWindow(QMainWindow):
         self._clearBoard()
         self._activeBoard = "Home"
 
+        newMeeting, newMeetingLabel = createBoardButtonLabelPair(
+            self._board, "New Meeting", "icons/home/add.png", "Create a new meeting.")
+        newMeeting.clicked.connect(self._showCreationPrompt)
+
         if len(self._meetings) == 0:
-            # Show blank new meeting page
-            newMeeting = QPushButton(self._board)
-            newMeeting.setProperty("type", "boardButton")
-            newMeeting.setIcon(QIcon(alphaAwareFill(QPixmap("icons/home/add.png"), QColor("#000000"))))
-            newMeeting.setStatusTip("Create a new meeting.")
+            # Show button at center
             newMeeting.setFixedSize(50, 50)
             newMeeting.setIconSize(QSize(50, 50))
             newMeeting.move(375, 160)
-            newMeeting.clicked.connect(self._showCreationPrompt)
 
-            label = QLabel("New Meeting", self._board)
-            label.setFixedSize(202, 45)
-            label.setProperty("type", "boardButtonLabel")
-            label.move(300, 220)
-            # Segoe UI Semibold 21
+            newMeetingLabel.setProperty("type", "boardButtonLabelLarge")
+            newMeetingLabel.setFixedSize(202, 45)
+            newMeetingLabel.move(300, 220)
+            return
+
+        newMeeting.move(33, 24)
+        newMeetingLabel.move(72, 16)
+
+        pause, pauseLabel = createBoardButtonLabelPair(
+            self._board, "Pause Joining", "icons/home/pause.png", "Toggle automatic joining.")
+        pause.clicked.connect(self._toggleJoining)
+        pause.move(569, 24)
+        pauseLabel.move(608, 16)
+
+        # Create main scrollable area
+        cards = []
+        for meeting in self._meetings:
+            cards.append(createMeetingCard(meeting["title"], meeting["info"], meeting["time"]))
+        scrollArea = createHomeScrollableArea(self._board, cards)
 
     def _showSettings(self):
         self._activateSidebarButton("Settings")
@@ -466,13 +635,14 @@ class StrollWindow(QMainWindow):
         self._activeBoard = "Calendar"
 
     def _showCreationPrompt(self):
-        dialog = createMultiInputDialog("New Meeting", self)
+        dialog = createMultiInputDialog(
+            "New Meeting", self, QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         dialog.setFixedSize(600, 220)
-        dialog.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
 
-        linkRegEx = QRegExp(r"(?:https?://)?(?:\w+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?")
+        linkRegEx = QRegExp(
+            r"(?:https?://)?(?:\S+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?")
         # (?:https?://)? : optionally allow https:// or http://
-        # (?:\w+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain.
+        # (?:\S+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain. Also allow hyphens and numbers.
         # zoom\.us/j/ : raw match
         # (\d{9,11}) : meeting id, can be 9-11 digits
         # \?pwd= : raw match NOTE: May be enforced to 32 characters if found to be always true.
@@ -480,25 +650,29 @@ class StrollWindow(QMainWindow):
         # (?:.+)?: optionally allow instances of #success after link e.g. ?pwd=xxxxxxxxxxxxxxxxxx#success
 
         title = QLineEdit(placeholderText="(Defaults to meeting id)")
+
         # Meeting title defaults to meeting id
         title.textChanged.connect(
             lambda text: title.setText(
                 # Change to meeting id if 1) Title is empty and 2) Meeting id is found
                 # itemAt is a dirty method to get the `link` QLineEdit defined later
-                # NOTE: labels are stored as items before corresponding QLineEdits, hence itemAt(3) 
-                linkRegEx.cap(1) if (linkRegEx.exactMatch(dialog.form.itemAt(3).widget().text()) and text == "") else text
+                # NOTE: labels are stored as items before corresponding QLineEdits, hence itemAt(3)
+                linkRegEx.cap(1) if (linkRegEx.exactMatch(
+                    dialog.form.itemAt(3).widget().text()) and text == "") else text
             )
         )
         dialog.form.addRow("Title:", title)
 
-        link = QLineEdit(placeholderText="(...)zoom.us/j/xxxxxxxxx(x(x))?pwd=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(...)")
+        link = QLineEdit(
+            placeholderText="(...)zoom.us/j/xxxxxxxxx(x(x))?pwd=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx(...)")
         linkValidator = QRegExpValidator(linkRegEx)
         link.setValidator(linkValidator)
         # Meeting title defaults to meeting id
         link.textChanged.connect(
             lambda text: title.setText(
                 # Change to meeting id if 1) Title is empty and 2) Meeting id is found
-                linkRegEx.cap(1) if (linkRegEx.exactMatch(text) and title.text() == "") else title.text()
+                linkRegEx.cap(1) if (linkRegEx.exactMatch(text)
+                                     and title.text() == "") else title.text()
             )
         )
         dialog.form.addRow("Meeting Link:", link)
@@ -509,21 +683,43 @@ class StrollWindow(QMainWindow):
         dialog.buttonBox.accepted.connect(
             # Add meeting, destroy dialogue, show home if a valid link is found, all other data will then also be valid.
             # Chaining ors with non-returning functions allows multiple calls in a single statement.
-            lambda: self._addMeeting(title.text(), link.text(), time.time()) or dialog.deleteLater() or self._showHome() if linkRegEx.exactMatch(link.text()) else dialog.feedback.setText("Invalid link. Try again or send a report!")
+            lambda: self._addMeeting(title.text(), link.text(), time.time()) or dialog.deleteLater() or self._showHome(
+            ) if linkRegEx.exactMatch(link.text()) else dialog.feedback.setText("Invalid link. Try again or send a report!")
         )
         dialog.buttonBox.rejected.connect(dialog.destroy)
         dialog.setStyleSheet(self.styleSheet())
         dialog.show()
 
     def _addMeeting(self, title, link, time):
+        '''Adds a meeting to the scheduler and updates internal record.
+
+        Args:
+            title(string): The title associated with the meeting. Used only internally.
+            link(string): The link associated with the meeting.
+            time(QTime): The time to join the meeting at.
+        '''
+        print(time)
+        linkRegEx = r"(?:https?://)?(?:\S+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?"
+        pattern = re.search(linkRegEx, link)
+        meetingId = int(pattern.group(1))
+        password = pattern.group(2)
+        self._meetings.append({
+            "title": title,
+            "info": {
+                "id": meetingId,
+                "pwd": password
+            },
+            "time": str(time)
+        })
         pass
-    
+
     def _joinMeeting(self): pass
     def _syncMeetings(self): pass
     def _changeStatus(self, action, duration=-1): pass
     def _changeTheme(self): pass
     def _setSyncDelay(self, delay): pass
     def _toggleSyncing(self): pass
+    def _toggleJoining(self): pass
     def _linkAccount(self): pass
     def _removeAccount(self): pass
 
@@ -531,6 +727,9 @@ class StrollWindow(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = StrollWindow()
+    fontDb = QFontDatabase()
+    for file in glob.glob("fonts/*.ttf"):
+        fontDb.addApplicationFont(file)
     with open("themes/light_stroll.qss", "r") as stylesheet:
         window.setStyleSheet(stylesheet.read())
     window.show()
