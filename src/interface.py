@@ -7,7 +7,7 @@ from threading import Timer
 from PyQt5.QtCore import QRegExp, QSize, Qt, pyqtProperty
 from PyQt5.QtGui import QFontDatabase, QIcon, QPixmap, QColor, QRegExpValidator
 from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QDialog, QDialogButtonBox,
-                             QDoubleSpinBox, QFormLayout, QFrame,  QGridLayout, QLabel,QLineEdit,
+                             QDoubleSpinBox, QFormLayout, QFrame,  QGridLayout, QLabel, QLineEdit,
                              QMainWindow, QMenu,  QPushButton, QScrollArea, QSizePolicy, QTimeEdit,
                              QVBoxLayout, QWidget, QWidgetAction)
 
@@ -137,6 +137,7 @@ def createChoiceActionGroup(parent, groupName, choices, default):
 
     return actions
 
+
 def forceAspectRatio(widget, ratio):
     '''Forces a widget to resize with an aspect ratio.
 
@@ -153,6 +154,7 @@ def forceAspectRatio(widget, ratio):
         widget.resize(size)
     # widget.sizeHint = sizeHint
     widget.resizeEvent = resizeEvent
+
 
 def makeButtonIconDynamic(pushButton, size, ratio):
     '''Allows a QPushButton to resize its icon with the button itself.
@@ -171,6 +173,7 @@ def makeButtonIconDynamic(pushButton, size, ratio):
         iconSize.scale(pushButton.size() * ratio, Qt.KeepAspectRatio)
         pushButton.setIconSize(iconSize)
     pushButton.resizeEvent = wrapped
+
 
 def alphaAwareFill(pixmap, color):
     '''Fills a pixmap with the specified color alpha adjusted.
@@ -194,6 +197,7 @@ def alphaAwareFill(pixmap, color):
     pixmap = QPixmap.fromImage(image)
     return pixmap
 
+
 def createMultiInputDialog(title, parent, standardButtons=None):
     '''Creates a QInputDialog-like dialog that allows multiple entries.
 
@@ -205,7 +209,7 @@ def createMultiInputDialog(title, parent, standardButtons=None):
         title(string): The title for the dialog window.
         parent(QWidget): The parent for the dialog.
         standardButtons(optional, StandardButtons | StandardButton): The buttons at the bottom of the dialog.
-    
+
     Returns: The dialog.
     '''
     dialog = QDialog(parent)
@@ -290,7 +294,8 @@ def createMeetingCard(title, info, time):
     name.move(23, 23)
 
     # RED: #902039; YELLOW: #e3dd89; GREEN: #708f6f; GREY: #939393; LINK: #365CF2; TEXT: 11
-    clockPixmap = alphaAwareFill(QPixmap("icons/home/clock.png").scaled(17, 17), QColor("#902039"))
+    clockPixmap = alphaAwareFill(
+        QPixmap("icons/home/clock.png").scaled(17, 17), QColor("#902039"))
     clock = QLabel(card)
     clock.setPixmap(clockPixmap)
     clock.setFixedSize(17, 17)
@@ -299,7 +304,8 @@ def createMeetingCard(title, info, time):
     joinTime.setFixedSize(72, 17)
     joinTime.move(48, 74)
 
-    linkPixmap = alphaAwareFill(QPixmap("icons/home/link.png").scaled(17, 17), QColor("#939393"))
+    linkPixmap = alphaAwareFill(
+        QPixmap("icons/home/link.png").scaled(17, 17), QColor("#939393"))
     linkIcon = QLabel(card)
     linkIcon.setPixmap(linkPixmap)
     linkIcon.setFixedSize(17, 17)
@@ -309,19 +315,21 @@ def createMeetingCard(title, info, time):
     # Only the link contains the password, it's useless and space-consuming on the card itself.
     # Verification of the link can be done through meeting ID.
     link = linkFormat.format(info['id'], info['pwd'])
-    text = linkFormat.format(f"<b>{info['id']}</b>", ' . . .') # Meeting IDs are bold for easier comparison.
+    # Meeting IDs are bold for easier comparison.
+    text = linkFormat.format(f"<b>{info['id']}</b>", ' . . .')
     richText = f"<a href='{link}'> {text} </a>"
     meetingLink = QLabel(richText, card, objectName="link")
     meetingLink.setOpenExternalLinks(True)
     meetingLink.setFixedSize(378, 27)
     meetingLink.move(172, 68)
-    meetingLink.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+    meetingLink.setTextInteractionFlags(
+        Qt.TextInteractionFlag.LinksAccessibleByMouse)
     return card
 
 
 def createHomeScrollableArea(parent, cards=[]):
     '''Creates the scrollable meetings area in the home board.
-    
+
     Args:
         parent(QWidget): The parent for the scrollable area.
         cards(List[QWidget]): The cards to put in the scrollable area.
@@ -336,7 +344,8 @@ def createHomeScrollableArea(parent, cards=[]):
     scrollArea.move(17, 68)
 
     holder = QWidget(scrollArea, objectName="scrollHolder")
-    holder.setMinimumSize(758, (115+15) * len(cards)) # (Height + Padding) per card * No. of cards
+    # (Height + Padding) per card * No. of cards
+    holder.setMinimumSize(758, (115+15) * len(cards))
     scrollArea.setWidget(holder)
 
     vL = QVBoxLayout(holder)
@@ -621,7 +630,8 @@ class StrollWindow(QMainWindow):
         # Create main scrollable area
         cards = []
         for meeting in self._meetings:
-            cards.append(createMeetingCard(meeting["title"], meeting["info"], meeting["time"]))
+            cards.append(createMeetingCard(
+                meeting["title"], meeting["info"], meeting["time"]))
         scrollArea = createHomeScrollableArea(self._board, cards)
 
     def _showSettings(self):
