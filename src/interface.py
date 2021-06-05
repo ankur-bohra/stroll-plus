@@ -708,7 +708,6 @@ class StrollWindow(QMainWindow):
             link(string): The link associated with the meeting.
             time(QTime): The time to join the meeting at.
         '''
-        print(time)
         linkRegEx = r"(?:https?://)?(?:\S+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?"
         pattern = re.search(linkRegEx, link)
         meetingId = int(pattern.group(1))
