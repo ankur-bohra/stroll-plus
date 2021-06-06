@@ -1,4 +1,5 @@
 import ctypes
+from datetime import datetime
 import glob
 import sys
 import re
@@ -712,15 +713,17 @@ class StrollWindow(QMainWindow):
         pattern = re.search(linkRegEx, link)
         meetingId = int(pattern.group(1))
         password = pattern.group(2)
+        # Time is converted to datetime for operations and scheduler compatibility
+        today = datetime.today()
+        time = datetime(today.year, today.month, today.day, time.hour(), time.minute(), time.second())
         self._meetings.append({
             "title": title,
             "info": {
                 "id": meetingId,
                 "pwd": password
             },
-            "time": str(time)
+            "time": time
         })
-        pass
 
     def _joinMeeting(self): pass
     def _syncMeetings(self): pass
