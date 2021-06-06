@@ -650,13 +650,13 @@ class StrollWindow(QMainWindow):
         dialog.setFixedSize(600, 220)
 
         linkRegEx = QRegExp(
-            r"(?:https?://)?(?:\S+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?")
+            r"(?:https?://)?(?:[^\s\.]+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?")
         # (?:https?://)? : optionally allow https:// or http://
-        # (?:\S+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain. Also allow hyphens and numbers.
+        # (?:[^\s\.]+\.)? : optionally allow subdomain e.g. subdomain.zoom.us => subdomain. Don't allow spaces or further subdomains.
         # zoom\.us/j/ : raw match
         # (\d{9,11}) : meeting id, can be 9-11 digits
-        # \?pwd= : raw match NOTE: May be enforced to 32 characters if found to be always true.
-        # (\w+): match all alphanumeric characters
+        # \?pwd= : raw match
+        # (\w+): match all alphanumeric characters NOTE: May be enforced to 32 characters if found to be always true.
         # (?:.+)?: optionally allow instances of #success after link e.g. ?pwd=xxxxxxxxxxxxxxxxxx#success
 
         title = QLineEdit(placeholderText="(Defaults to meeting id)")
@@ -708,7 +708,7 @@ class StrollWindow(QMainWindow):
             link(string): The link associated with the meeting.
             time(QTime): The time to join the meeting at.
         '''
-        linkRegEx = r"(?:https?://)?(?:\S+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?"
+        linkRegEx = r"(?:https?://)?(?:[^\s\.]+\.)?zoom\.us/j/(\d{9,11})\?pwd=(\w+)(?:.+)?"
         pattern = re.search(linkRegEx, link)
         meetingId = int(pattern.group(1))
         password = pattern.group(2)
