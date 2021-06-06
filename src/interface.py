@@ -301,8 +301,9 @@ def createMeetingCard(title, info, time):
     clock.setPixmap(clockPixmap)
     clock.setFixedSize(17, 17)
     clock.move(23, 75)
-    joinTime = QLabel("9:30 AM", card, objectName="joinTime")
-    joinTime.setFixedSize(72, 17)
+    # There's no character for non zero-padded hour
+    joinTime = QLabel(time.strftime(f"{time.hour}:%M %p"), card, objectName="joinTime")
+    joinTime.setFixedSize(82, 17)
     joinTime.move(48, 74)
 
     linkPixmap = alphaAwareFill(
