@@ -20,15 +20,16 @@ class Scheduler:
         self.timer = None
         pass
 
-    def add_task(self, time, action):
+    def add_task(self, time, action, data=None):
         '''Add a task to the task-chain.
 
         Args:
             time (datetime): When the task occurs.
             action (function): Function to run when `time` is reached.
+            data (Dict): The data associated with the task. Never used internally.
         '''
         self._handle_terminated()
-        task = TaskNode({"time": time, "action": action})
+        task = TaskNode({"time": time, "action": action, "data": data})
         head = self.head
         if head is None:  # First task is being added
             self.head = task
