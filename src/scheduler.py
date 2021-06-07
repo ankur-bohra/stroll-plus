@@ -5,11 +5,13 @@ import threading
 import time
 import datetime as dt
 
+
 class TaskNode:
     def __init__(self, value):
         self.next = None
         self.value = value
         pass
+
 
 class Scheduler:
     def __init__(self):
@@ -28,8 +30,8 @@ class Scheduler:
         self._handle_terminated()
         task = TaskNode({"time": time, "action": action})
         head = self.head
-        if head is None: # First task is being added
-            self.head =  task
+        if head is None:  # First task is being added
+            self.head = task
         else:
             node = self.head
             while node:
@@ -40,17 +42,18 @@ class Scheduler:
                 if notTail:
                     beforeNextNode = time < node.next.value["time"]
                 else:
-                    beforeNextNode = True # allow all times at the tail
+                    beforeNextNode = True  # allow all times at the tail
 
-                if afterNode and beforeNextNode: # Add task after current node
+                if afterNode and beforeNextNode:  # Add task after current node
                     task.next = node.next
                     node.next = task
                     break
-                elif isHead and not afterNode: # Add task before current node (head)
+                # Add task before current node (head)
+                elif isHead and not afterNode:
                     task.next = node
                     self.head = task
                 node = node.next
-        
+
         if task == self.head:
             # Timer needs to be changed
             if self.timer and self.active:
@@ -71,7 +74,8 @@ class Scheduler:
         if task:
             interval = (task.value["time"] - dt.datetime.now()).total_seconds()
             # NOTE: Negative intervals execute instantly and are allowed in threading.Timer()
-            self.timer = threading.Timer(interval, self._wrap_action(task.value["action"]))
+            self.timer = threading.Timer(
+                interval, self._wrap_action(task.value["action"]))
             self.timer.start()
 
     def start(self, auto_stop=False):
@@ -84,7 +88,8 @@ class Scheduler:
         self.resume()
         if auto_stop is False:
             # Add daemon to keep scheduler alive
-            self.daemon = threading.Timer(1 * 24 * 60 * 60, lambda: print("Exiting"))
+            self.daemon = threading.Timer(
+                1 * 24 * 60 * 60, lambda: print("Exiting"))
 
     def terminate(self):
         '''Stop the scheduler.
@@ -110,21 +115,21 @@ class Scheduler:
         '''
         self._handle_terminated()
         self.active = False
-        if timeToLast>=0:
+        if timeToLast >= 0:
             if self.timer:
                 self.timer.cancel()
             threading.Timer(timeToLast, lambda: self.resume())
-    
+
     def resume(self, timeToLast=-1):
         '''Resume the scheduler.
 
         Args:
             timeToLast(float, optional): Number of seconds to resume the scheduler for.
-        
+
             Note that the scheduler's activity is reverted, not toggled.
         '''
         self._handle_terminated()
         self.active = True
         self._wait_for_head()
-        if timeToLast>=0:
+        if timeToLast >= 0:
             threading.Timer(timeToLast, lambda: self.pause())
