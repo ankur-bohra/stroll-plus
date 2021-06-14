@@ -1,16 +1,25 @@
 import ctypes
-from datetime import datetime
 import glob
-import sys
+import os
 import re
+import sys
+import toml
+from datetime import datetime
 from threading import Timer
 
-from PyQt5.QtCore import QRegExp, QSize, Qt, pyqtProperty
-from PyQt5.QtGui import QFontDatabase, QIcon, QPixmap, QColor, QRegExpValidator
-from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QDialog, QDialogButtonBox,
-                             QDoubleSpinBox, QFormLayout, QFrame,  QGridLayout, QLabel, QLineEdit,
-                             QMainWindow, QMenu,  QPushButton, QScrollArea, QSizePolicy, QTimeEdit,
-                             QVBoxLayout, QWidget, QWidgetAction)
+from PyQt5.QtCore import QRegExp, QSize, Qt
+from PyQt5.QtGui import QColor, QFontDatabase, QIcon, QPixmap, QRegExpValidator
+from PyQt5.QtWidgets import (QAction, QActionGroup, QApplication, QDialog,
+                             QDialogButtonBox, QDoubleSpinBox, QFormLayout,
+                             QFrame, QGridLayout, QLabel, QLineEdit,
+                             QMainWindow, QMenu, QPushButton, QScrollArea,
+                             QSizePolicy, QTimeEdit, QVBoxLayout, QWidget,
+                             QWidgetAction)
+
+from scheduler import Scheduler
+
+
+CURRENT_THEME = None
 
 
 def mnemonicTextToPascal(text):
@@ -19,6 +28,64 @@ def mnemonicTextToPascal(text):
     name = name[0].lower() + name[1:]  # Decapitalize first character of string
     name = name.replace(" ", "")  # Remove all spaces
     return name
+
+
+def solveThemeReference(path):
+    '''Returns the value referred to by the given path in the current global theme.
+
+    Example:
+        solveThemeReference({'foo': {'bar': 'baz'}}, "$Theme.foo.bar") -> 'baz'
+
+    Args:
+        path(str): The path to the required value, optionally prepended by a $ sign
+
+    Returns:
+        The value referred by the path.
+    '''
+    global CURRENT_THEME
+    keys = path.split(".")
+    cursor = CURRENT_THEME
+    path_traversed = ""
+    for key in keys:
+        # Strip $ from first key if given
+        if path_traversed == "" and key[0] == "$":
+            key = key[1:]
+
+        if type(cursor) == dict:
+            cursor = cursor.get(key)
+            path_traversed += "." + key
+        else:
+            raise BaseException(
+                f"Invalid path, partial path {path_traversed} does not lead to a dictionary.")
+    return cursor
+
+
+def fillStylesheet(theme):
+    '''Fills the core stylesheet with the theme colours.
+
+    Args:
+        theme(str): The theme name, as seen in themes/theme_name.toml
+
+    Returns:
+        stylesheet(str): The filled stylesheet.
+        theme(dict): The read theme dictionary.
+    '''
+    global CURRENT_THEME
+    with open(f"themes/{theme}.toml", "r") as file:
+        CURRENT_THEME = toml.load(file)
+
+    with open(f"themes/base.qss") as file:
+        style = file.read()
+
+    regex = r"\$(?:\w+\.?)+"
+    # \$: Raw match
+    # (?:\w+\.?): Non capturing group
+    #   \w+: Match word
+    #   \.?: Optional period
+    # +: Allow deep indexing e.g. $a.b.c
+    style = re.sub(
+        regex, lambda match: solveThemeReference(match.group(0)), style)
+    return style
 
 
 def createMenu(parent, text, statusTip=None, children=[], container=None):
@@ -260,7 +327,9 @@ def createBoardButtonLabelPair(parent, text, iconPath, statusTip=None):
     '''
     button = QPushButton(parent)
     button.setProperty("type", "boardButton")
-    button.setIcon(QIcon(alphaAwareFill(QPixmap(iconPath), QColor("#000000"))))
+    fillColor = QColor("#000000") # QColor(solveThemeReference("Board.LabelledButton.Background"))
+    filledPixmap = alphaAwareFill(QPixmap(iconPath), fillColor)
+    button.setIcon(QIcon(filledPixmap))
     button.setFixedSize(25, 25)
     button.setIconSize(QSize(25, 25))
     if statusTip:
@@ -302,12 +371,13 @@ def createMeetingCard(title, info, time):
     clock.setFixedSize(17, 17)
     clock.move(23, 75)
     # There's no character for non zero-padded hour
-    joinTime = QLabel(time.strftime(f"{time.hour}:%M %p"), card, objectName="joinTime")
+    joinTime = QLabel(time.strftime(
+        f"{time.hour}:%M %p"), card, objectName="joinTime")
     joinTime.setFixedSize(82, 17)
     joinTime.move(48, 74)
 
     linkPixmap = alphaAwareFill(
-        QPixmap("icons/home/link.png").scaled(17, 17), QColor("#939393"))
+        QPixmap("icons/home/link.png").scaled(17, 17), QColor(solveThemeReference("MeetingCard.Link.Icon.background")))
     linkIcon = QLabel(card)
     linkIcon.setPixmap(linkPixmap)
     linkIcon.setFixedSize(17, 17)
@@ -358,6 +428,18 @@ def createHomeScrollableArea(parent, cards=[]):
     scrollArea.show()
 
 
+def joinMeeting(id, hashed_pwd):
+    '''Joins a zoom meeting using the zoom client's url protocol.
+
+    Args:
+        id(int): The meeting ID.
+        hashed_pwd(str): The hashed password as it appears in the meeting link.
+    '''
+    url = f"zoommtg://zoom.us/join?action=join&confno={id}&pwd={hashed_pwd}"
+    command = f"%appdata%/Zoom/bin/zoom.exe --url=\"{url}\""
+    os.popen(command)
+
+
 class StrollWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -366,7 +448,7 @@ class StrollWindow(QMainWindow):
         # Used to switch from empty message after tooltips to previous message
         self._statusBarMessage = "Starting up Stroll..."
         self._activeBoard = None  # e.g. calendar, home, ...
-        self._meetings = []
+        self._scheduler = Scheduler()
 
         # WINDOW CONFIGURATION
         self.setWindowTitle(" Stroll")
@@ -384,6 +466,8 @@ class StrollWindow(QMainWindow):
         self._createMenuBar()
         self._createBody()
         self._showHome()
+
+        self._scheduler.start()
 
     def _createStatusBar(self):
         '''Creates the status bar at the bottom of the window.
@@ -534,6 +618,9 @@ class StrollWindow(QMainWindow):
         # All icons are given the same target size, and each icon adjusts according
         # to its own aspect ratio.
         iconToButtonRatio = 0.7
+
+        INACTIVE_BTN_ICON_COLOR = solveThemeReference("Sidebar.Button.Inactive.foreground")
+        ACTIVE_BTN_ICON_COLOR = solveThemeReference("Sidebar.Button.Active.foreground")
         for button_no in range(len(buttons)):
             name = buttons[button_no]
             # The button holder has the rounded corners and holds the actual push
@@ -547,8 +634,7 @@ class StrollWindow(QMainWindow):
 
             # The button switches between premade copies of active and inactive icons.
             pixmap = QPixmap(f"icons/sidebar/{name}.png")
-            INACTIVE_BTN_ICON_COLOR = "#707169"
-            ACTIVE_BTN_ICON_COLOR = "#3B3C37"
+            
             # Make icons accessible directly from button.
             button.inactiveIcon = QIcon(alphaAwareFill(
                 pixmap, QColor(INACTIVE_BTN_ICON_COLOR)))
@@ -609,7 +695,7 @@ class StrollWindow(QMainWindow):
             self._board, "New Meeting", "icons/home/add.png", "Create a new meeting.")
         newMeeting.clicked.connect(self._showCreationPrompt)
 
-        if len(self._meetings) == 0:
+        if self._scheduler.head is None:
             # Show button at center
             newMeeting.setFixedSize(50, 50)
             newMeeting.setIconSize(QSize(50, 50))
@@ -631,9 +717,12 @@ class StrollWindow(QMainWindow):
 
         # Create main scrollable area
         cards = []
-        for meeting in self._meetings:
+        node = self._scheduler.head
+        while node:
+            data = node.value["data"]
             cards.append(createMeetingCard(
-                meeting["title"], meeting["info"], meeting["time"]))
+                data["title"], data["info"], data["time"]))
+            node = node.next
         scrollArea = createHomeScrollableArea(self._board, cards)
 
     def _showSettings(self):
@@ -716,15 +805,19 @@ class StrollWindow(QMainWindow):
         password = pattern.group(2)
         # Time is converted to datetime for operations and scheduler compatibility
         today = datetime.today()
-        time = datetime(today.year, today.month, today.day, time.hour(), time.minute(), time.second())
-        self._meetings.append({
+        time = datetime(today.year, today.month, today.day,
+                        time.hour(), time.minute(), time.second())
+        data = {
             "title": title,
             "info": {
                 "id": meetingId,
                 "pwd": password
             },
             "time": time
-        })
+        }
+
+        self._scheduler.add_task(time, lambda: joinMeeting(
+            meetingId, password), data=data)
 
     def _joinMeeting(self): pass
     def _syncMeetings(self): pass
@@ -739,11 +832,11 @@ class StrollWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    stylesheet = fillStylesheet("light")
     window = StrollWindow()
     fontDb = QFontDatabase()
     for file in glob.glob("fonts/*.ttf"):
         fontDb.addApplicationFont(file)
-    with open("themes/light_stroll.qss", "r") as stylesheet:
-        window.setStyleSheet(stylesheet.read())
+    window.setStyleSheet(stylesheet)
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec_() and window._scheduler.terminate())

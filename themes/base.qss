@@ -1,0 +1,96 @@
+QStatusBar, QMenuBar, QMenuBar::item {
+    background-color: $NativeBar.background;
+    color: $NativeBar.foreground;
+}
+QMenuBar { border-bottom: 1px solid $NativeBar.border }
+QStatusBar { border-top: 1px solid $NativeBar.border }
+
+/* SIDEBAR STYLES */
+QFrame#sidebar { background-color: $Sidebar.background }
+
+QPushButton[type="sidebarButton"] { border-radius: 6px }
+
+QPushButton[type="sidebarButton"][active="true"] { background-color: $Sidebar.Button.Active.background }
+QPushButton[type="sidebarButton"][active="true"]:hover { background-color: $Sidebar.Button.Active.hover.background }
+
+QPushButton[type="sidebarButton"][active="false"] { background-color: $Sidebar.Button.Inactive.background }
+QPushButton[type="sidebarButton"][active="false"]:hover { background-color: $Sidebar.Button.Inactive.hover.background }
+
+
+/* BOARD STYLES */
+QFrame#board { background-color: $Board.background }
+
+QPushButton[type="boardButton"] {
+    background-color: $Board.LabelledButton.background;
+    border: none
+}
+QLabel[type="boardButtonLabel"] {
+    font-family: "Segoe UI Semibold";
+    font-size: 24px;
+    color: $Board.LabelledButton.foreground;
+}
+QLabel[type="boardButtonLabelLarge"] {
+    font-family: "Segoe UI Semibold";
+    font-size: 33px;
+    color: $Board.LabelledButton.foreground;
+}
+
+/* MESSAGE BOX (PROMPT) STYLES  */
+QDialog { background-color: $Dialog.background }
+
+QDialog>QDialogButtonBox {
+    background-color: $NativeBar.background;
+    border-top: 1px solid $NativeBar.border
+}
+
+QDialog #feedback { color: $Dialog.InvalidityPrompt.foreground }
+
+/* SCROLL STYLE */
+QScrollArea {
+    background-color: $ScrollArea.background;
+    border: none;
+}
+
+/* The holder widget contains actual members */
+#scrollHolder {background-color: $ScrollArea.background}
+
+#meetingCard {
+    border-radius: 16px;
+    background-color: $MeetingCard.background;
+}
+#meetingCard:hover {border: 1px solid $MeetingCard.hover.border}
+#meetingCard > #name {
+    font-family: "Segoe UI Bold";
+    font-weight: 600;
+    font-size: 31px;
+    color: $MeetingCard.Name.foreground;
+}
+#meetingCard > #joinTime {
+    font-family: "Segoe UI Bold";
+    font-weight: 600;
+    font-size: 18px;
+    color: $MeetingCard.JoinTime.foreground
+}
+#meetingCard > #link {
+    font-family: "Segoe UI";
+    font-size: 18px;
+    color: $MeetingCard.Link.foreground;
+}
+
+QScrollBar:vertical {
+    background-color: $ScrollArea.ScrollBar.background;
+    width: 20px;
+    border-radius: 10px; /* width / 2 */
+}
+
+QScrollBar::handle:vertical {
+    background-color: $ScrollArea.ScrollBar.Handle.background;
+    border-radius: 10px;
+}
+
+/* Remove the arrows and their containers */
+QScrollBar::add-line, QScrollBar::add-page, QScrollBar::sub-line, QScrollBar::sub-page {
+    height: 0px;
+    width: 0px;
+    background: none
+}

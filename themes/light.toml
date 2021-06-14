@@ -1,0 +1,63 @@
+[NativeBar]
+background = "#F8F8F8"
+foreground = "#000000"
+border = "#e4e4e4"
+
+
+[Sidebar]
+background = "#FFFFFF"
+
+[Sidebar.Button.Active]
+background = "#FFF2E5"
+foreground = "#3B3C37"
+hover.background = "#FFF2E5"
+hover.foreground = "#3B3C37"
+
+[Sidebar.Button.Inactive]
+background = "#FFFFFF"
+foreground = "#707169"
+hover.background = "#FFFAF4"
+hover.foreground = "#707169"
+
+
+[Board]
+background = "#FFF2E5"
+
+[Board.LabelledButton]
+background = "#FFF2E5"
+foreground = "#2E2E2E"  
+
+
+[Dialog]
+background = "#FFF2E5"
+
+[Dialog.InvalidityPrompt]
+foreground = "#ff0000"
+
+
+[ScrollArea]
+background = "#FFF2E5"
+
+[ScrollArea.ScrollBar]
+background = "#FFF6ED"
+
+[ScrollArea.ScrollBar.Handle]
+background = "#FFFFFF"
+
+
+[MeetingCard]
+background = "#FFFFFF"
+hover.border = "#E8E8E8"
+
+[MeetingCard.Name]
+foreground = "#000000"
+
+[MeetingCard.JoinTime]
+foreground = "#939393"
+
+[MeetingCard.Link]
+foreground = "#365CF2"
+
+[MeetingCard.Link.Icon]
+background = "#939393"
+
