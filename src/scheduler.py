@@ -57,8 +57,9 @@ class Scheduler:
 
         if task == self.head:
             # Timer needs to be changed
-            if self.timer and self.active:
-                self.timer.cancel()
+            if self.active:
+                if self.timer:
+                    self.timer.cancel()
                 self._wait_for_head()
 
     def _wrap_action(self, action):
