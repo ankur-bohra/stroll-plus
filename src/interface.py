@@ -327,8 +327,8 @@ def createBoardButtonLabelPair(parent, text, iconPath, statusTip=None):
     '''
     button = QPushButton(parent)
     button.setProperty("type", "boardButton")
-    fillColor = QColor("#000000") # QColor(solveThemeReference("Board.LabelledButton.Background"))
-    filledPixmap = alphaAwareFill(QPixmap(iconPath), fillColor)
+    fillColor = solveThemeReference("Board.LabelledButton.foreground")
+    filledPixmap = alphaAwareFill(QPixmap(iconPath), QColor(fillColor))
     button.setIcon(QIcon(filledPixmap))
     button.setFixedSize(25, 25)
     button.setIconSize(QSize(25, 25))
