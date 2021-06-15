@@ -702,6 +702,7 @@ class StrollWindow(QMainWindow):
             newMeeting.move(375, 160)
 
             newMeetingLabel.setProperty("type", "boardButtonLabelLarge")
+            newMeetingLabel.setStyleSheet(self.styleSheet())  # Needs an update to enforce style
             newMeetingLabel.setFixedSize(202, 45)
             newMeetingLabel.move(300, 220)
             return
