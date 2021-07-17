@@ -1,6 +1,11 @@
-Archived due to deviation from original goal.
+Archived due to deviation from original goal. New project at https://github.com/ankur-bohra/stroll
 
 
+
+
+
+
+___
 # stroll
 Automatically join zoom links. Without a browser.
 
