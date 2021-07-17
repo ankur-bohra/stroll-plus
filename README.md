@@ -1,3 +1,6 @@
+Archived due to deviation from original goal.
+
+
 # stroll
 Automatically join zoom links. Without a browser.
 
